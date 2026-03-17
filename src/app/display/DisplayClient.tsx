@@ -148,16 +148,13 @@ export default function DisplayClient() {
       </header>
 
       {/* Main Content */}
-      <main className="relative z-10 flex-1 flex flex-col px-8 py-10 min-h-0">
+      <main className="relative z-10 flex-1 flex flex-col px-8 pt-4 pb-6 min-h-0">
         {/* Logo + Title */}
-        <div className="text-center mb-10 flex-shrink-0">
-          <p className="text-2xl md:text-3xl font-semibold uppercase tracking-[0.3em] text-gray-400 mb-4">
-            Welcome To
-          </p>
+        <div className="text-center mb-6 flex-shrink-0">
           <img
-            src="/mkehd2.png"
+            src="/Welcome.png"
             alt="Milwaukee Harley-Davidson"
-            className="mx-auto h-56 md:h-72 lg:h-88 w-auto mb-6 object-contain"
+            className="mx-auto h-48 md:h-60 lg:h-72 w-auto mb-4 object-contain"
           />
           <h2 className="text-5xl md:text-6xl lg:text-7xl font-black tracking-tight text-white">
             Today&apos;s <span className="text-harley-orange">Appointments</span>
@@ -211,7 +208,7 @@ export default function DisplayClient() {
                 <p className="mt-3 text-lg">The queue is currently empty</p>
               </div>
             ) : (
-              <div className="grid gap-3">
+              <div className="grid gap-4">
                 <AnimatePresence>
                   {waiting.map((item, index) => (
                     <motion.div
@@ -221,22 +218,15 @@ export default function DisplayClient() {
                       animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0, x: 20 }}
                       transition={{ delay: index * 0.03 }}
-                      className={`
-                        flex items-center px-8 py-5 rounded-2xl border transition-all duration-300
-                        ${
-                          index === 0
-                            ? "bg-iron-panel border-harley-orange/20 shadow-lg"
-                            : "bg-iron-dark/60 border-iron-border/40"
-                        }
-                      `}
+                      className="flex items-center justify-center px-10 py-6 rounded-2xl bg-gradient-to-r from-iron-panel/90 via-iron-panel/70 to-iron-panel/90 border border-iron-border/30 shadow-lg"
                     >
-                    <h3
-                        className={`text-2xl md:text-3xl font-bold tracking-tight ${
-                          index === 0 ? "text-white" : "text-gray-300"
-                        }`}
-                      >
-                        {item.name}
-                      </h3>
+                      <div className="flex items-center gap-4">
+                        <span className="text-harley-orange text-2xl">★</span>
+                        <h3 className="text-3xl md:text-4xl lg:text-5xl font-black tracking-tight text-white">
+                          {item.name}
+                        </h3>
+                        <span className="text-harley-orange text-2xl">★</span>
+                      </div>
                     </motion.div>
                   ))}
                 </AnimatePresence>
