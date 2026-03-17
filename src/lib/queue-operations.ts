@@ -9,7 +9,8 @@ import {
   where,
   orderBy,
   writeBatch,
-  Timestamp,
+  serverTimestamp,
+  limit,
 } from "firebase/firestore";
 import { getDb } from "./firebase";
 import { COLLECTION_NAME } from "./constants";
@@ -20,40 +21,25 @@ function queueRef() {
 }
 
 export async function addToQueue(input: QueueItemInput): Promise<string> {
-  const ref = queueRef();
-  const waitingQuery = query(
-    ref,
-    where("status", "==", "waiting"),
-    orderBy("position", "desc")
-  );
-  const snapshot = await getDocs(waitingQuery);
-  const maxPosition = snapshot.empty
-    ? 0
-    : (snapshot.docs[0].data() as QueueItem).position;
-
-  const docRef = await addDoc(ref, {
+  const docRef = await addDoc(queueRef(), {
     name: input.name,
     serviceType: input.serviceType || null,
     status: "waiting",
-    position: maxPosition + 1,
-    createdAt: Timestamp.now(),
+    position: Date.now(),
+    createdAt: serverTimestamp(),
   });
-
   return docRef.id;
 }
 
 export async function startService(itemId: string): Promise<void> {
   const db = getDb();
-  const ref = queueRef();
-  const servingQuery = query(ref, where("status", "==", "serving"));
+  const servingQuery = query(queueRef(), where("status", "==", "serving"));
   const servingSnapshot = await getDocs(servingQuery);
 
   const batch = writeBatch(db);
-
   servingSnapshot.docs.forEach((d) => {
     batch.update(d.ref, { status: "done" });
   });
-
   batch.update(doc(db, COLLECTION_NAME, itemId), { status: "serving" });
   await batch.commit();
 }
@@ -67,44 +53,32 @@ export async function callNext(): Promise<boolean> {
   const ref = queueRef();
 
   const servingQuery = query(ref, where("status", "==", "serving"));
-  const servingSnapshot = await getDocs(servingQuery);
-
   const waitingQuery = query(
     ref,
     where("status", "==", "waiting"),
-    orderBy("position", "asc")
+    orderBy("position", "asc"),
+    limit(1)
   );
-  const waitingSnapshot = await getDocs(waitingQuery);
+
+  const [servingSnapshot, waitingSnapshot] = await Promise.all([
+    getDocs(servingQuery),
+    getDocs(waitingQuery),
+  ]);
 
   if (waitingSnapshot.empty) return false;
 
   const batch = writeBatch(db);
-
   servingSnapshot.docs.forEach((d) => {
     batch.update(d.ref, { status: "done" });
   });
-
-  const nextDoc = waitingSnapshot.docs[0];
-  batch.update(nextDoc.ref, { status: "serving" });
-
+  batch.update(waitingSnapshot.docs[0].ref, { status: "serving" });
   await batch.commit();
   return true;
 }
 
 export async function skipItem(itemId: string): Promise<void> {
-  const ref = queueRef();
-  const waitingQuery = query(
-    ref,
-    where("status", "==", "waiting"),
-    orderBy("position", "desc")
-  );
-  const snapshot = await getDocs(waitingQuery);
-  const maxPosition = snapshot.empty
-    ? 1
-    : (snapshot.docs[0].data() as QueueItem).position;
-
   await updateDoc(doc(getDb(), COLLECTION_NAME, itemId), {
-    position: maxPosition + 1,
+    position: Date.now(),
   });
 }
 

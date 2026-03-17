@@ -31,34 +31,54 @@ export function useQueue() {
 
     const servingQuery = query(queueRef, where("status", "==", "serving"));
 
-    const unsubWaiting = onSnapshot(waitingQuery, (snapshot) => {
-      const items: QueueItem[] = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as QueueItem[];
-      setWaiting(items);
-      setLoading(false);
-    });
+    let loadCount = 0;
+    const markLoaded = () => {
+      loadCount++;
+      if (loadCount >= 2) setLoading(false);
+    };
 
-    const unsubServing = onSnapshot(servingQuery, (snapshot) => {
-      if (snapshot.empty) {
-        setServing(null);
-        prevServingId.current = null;
-      } else {
-        const item = {
-          id: snapshot.docs[0].id,
-          ...snapshot.docs[0].data(),
-        } as QueueItem;
-
-        if (prevServingId.current !== null && prevServingId.current !== item.id) {
-          setServingChanged(true);
-          setTimeout(() => setServingChanged(false), 3000);
-        }
-        prevServingId.current = item.id;
-        setServing(item);
+    const unsubWaiting = onSnapshot(
+      waitingQuery,
+      (snapshot) => {
+        const items: QueueItem[] = snapshot.docs.map((d) => ({
+          id: d.id,
+          ...d.data(),
+        })) as QueueItem[];
+        setWaiting(items);
+        markLoaded();
+      },
+      (error) => {
+        console.error("Waiting query error:", error);
+        markLoaded();
       }
-      setLoading(false);
-    });
+    );
+
+    const unsubServing = onSnapshot(
+      servingQuery,
+      (snapshot) => {
+        if (snapshot.empty) {
+          setServing(null);
+          prevServingId.current = null;
+        } else {
+          const item = {
+            id: snapshot.docs[0].id,
+            ...snapshot.docs[0].data(),
+          } as QueueItem;
+
+          if (prevServingId.current !== null && prevServingId.current !== item.id) {
+            setServingChanged(true);
+            setTimeout(() => setServingChanged(false), 3000);
+          }
+          prevServingId.current = item.id;
+          setServing(item);
+        }
+        markLoaded();
+      },
+      (error) => {
+        console.error("Serving query error:", error);
+        markLoaded();
+      }
+    );
 
     return () => {
       unsubWaiting();
