@@ -88,7 +88,7 @@ export default function DisplayClient() {
           <img
             src="/mkehd.png"
             alt="Milwaukee Harley-Davidson"
-            className="mx-auto h-28 md:h-36 lg:h-44 w-auto mb-6 object-contain"
+            className="mx-auto h-56 md:h-72 lg:h-88 w-auto mb-6 object-contain"
           />
           <h2 className="text-5xl md:text-6xl lg:text-7xl font-black tracking-tight text-white">
             Appointments <span className="text-harley-orange">Today!</span>
