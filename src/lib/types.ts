@@ -17,6 +17,7 @@ export interface QueueItemInput {
 }
 
 export const SERVICE_TYPES = [
+  "Sales",
   "Oil Change",
   "Tire Service",
   "Engine Tune-Up",
