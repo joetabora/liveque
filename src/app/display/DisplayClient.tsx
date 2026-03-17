@@ -120,7 +120,7 @@ export default function DisplayClient() {
       <header className="relative z-10 flex items-center justify-between px-8 py-6 border-b border-iron-border/50 flex-shrink-0">
         <div className="flex items-center gap-4">
           <h1 className="text-2xl md:text-3xl font-black tracking-tight text-white">
-            Milwaukee <span className="text-harley-orange">Harley-Davidson</span>
+            Welcome <span className="text-harley-orange">To</span>
           </h1>
         </div>
         <div className="flex items-center gap-6">
