@@ -151,13 +151,16 @@ export default function DisplayClient() {
       <main className="relative z-10 flex-1 flex flex-col px-8 py-10 min-h-0">
         {/* Logo + Title */}
         <div className="text-center mb-10 flex-shrink-0">
+          <p className="text-2xl md:text-3xl font-semibold uppercase tracking-[0.3em] text-gray-400 mb-4">
+            Welcome To
+          </p>
           <img
             src="/mkehd2.png"
             alt="Milwaukee Harley-Davidson"
             className="mx-auto h-56 md:h-72 lg:h-88 w-auto mb-6 object-contain"
           />
           <h2 className="text-5xl md:text-6xl lg:text-7xl font-black tracking-tight text-white">
-            Appointments <span className="text-harley-orange">Today!</span>
+            Today&apos;s <span className="text-harley-orange">Appointments</span>
           </h2>
         </div>
 
@@ -227,15 +230,7 @@ export default function DisplayClient() {
                         }
                       `}
                     >
-                      <span
-                        className={`
-                          text-2xl font-black w-12 text-center
-                          ${index === 0 ? "text-harley-orange" : "text-gray-600"}
-                        `}
-                      >
-                        {index + 1}
-                      </span>
-                      <h3
+                    <h3
                         className={`text-2xl md:text-3xl font-bold tracking-tight ${
                           index === 0 ? "text-white" : "text-gray-300"
                         }`}
