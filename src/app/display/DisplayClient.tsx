@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useCallback, useRef } from "react";
+import { useEffect, useCallback, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useQueue } from "@/hooks/useQueue";
 import { Clock } from "@/components/ui/Clock";
@@ -9,7 +9,11 @@ export default function DisplayClient() {
   const { waiting, serving, loading, servingChanged, playNotification } =
     useQueue();
   const containerRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const prevServingRef = useRef<string | null>(null);
+  const animationRef = useRef<number | null>(null);
+  const [needsScroll, setNeedsScroll] = useState(false);
 
   useEffect(() => {
     if (serving && prevServingRef.current !== serving.id) {
@@ -17,6 +21,68 @@ export default function DisplayClient() {
       prevServingRef.current = serving.id;
     }
   }, [serving, playNotification]);
+
+  useEffect(() => {
+    const scrollEl = scrollContainerRef.current;
+    const listEl = listRef.current;
+    if (!scrollEl || !listEl) return;
+
+    const checkOverflow = () => {
+      setNeedsScroll(listEl.scrollHeight > scrollEl.clientHeight);
+    };
+
+    checkOverflow();
+    const observer = new ResizeObserver(checkOverflow);
+    observer.observe(scrollEl);
+    observer.observe(listEl);
+    return () => observer.disconnect();
+  }, [waiting]);
+
+  useEffect(() => {
+    const scrollEl = scrollContainerRef.current;
+    if (!scrollEl || !needsScroll) {
+      if (animationRef.current) cancelAnimationFrame(animationRef.current);
+      return;
+    }
+
+    let scrollPos = 0;
+    let direction = 1;
+    let pauseUntil = 0;
+    const SPEED = 0.5; // px per frame
+    const PAUSE_MS = 3000; // pause at top and bottom
+
+    const step = () => {
+      const now = Date.now();
+      if (now < pauseUntil) {
+        animationRef.current = requestAnimationFrame(step);
+        return;
+      }
+
+      const maxScroll = scrollEl.scrollHeight - scrollEl.clientHeight;
+      scrollPos += SPEED * direction;
+
+      if (scrollPos >= maxScroll) {
+        scrollPos = maxScroll;
+        direction = -1;
+        pauseUntil = now + PAUSE_MS;
+      } else if (scrollPos <= 0) {
+        scrollPos = 0;
+        direction = 1;
+        pauseUntil = now + PAUSE_MS;
+      }
+
+      scrollEl.scrollTop = scrollPos;
+      animationRef.current = requestAnimationFrame(step);
+    };
+
+    // Start with a brief pause at the top
+    pauseUntil = Date.now() + PAUSE_MS;
+    animationRef.current = requestAnimationFrame(step);
+
+    return () => {
+      if (animationRef.current) cancelAnimationFrame(animationRef.current);
+    };
+  }, [needsScroll, waiting]);
 
   const toggleFullscreen = useCallback(() => {
     if (!document.fullscreenElement) {
@@ -42,7 +108,7 @@ export default function DisplayClient() {
   return (
     <div
       ref={containerRef}
-      className="min-h-screen bg-iron-black flex flex-col relative overflow-hidden"
+      className="h-screen bg-iron-black flex flex-col relative overflow-hidden"
     >
       {/* Ambient background effects */}
       <div className="absolute inset-0 pointer-events-none">
@@ -51,7 +117,7 @@ export default function DisplayClient() {
       </div>
 
       {/* Header */}
-      <header className="relative z-10 flex items-center justify-between px-8 py-6 border-b border-iron-border/50">
+      <header className="relative z-10 flex items-center justify-between px-8 py-6 border-b border-iron-border/50 flex-shrink-0">
         <div className="flex items-center gap-4">
           <h1 className="text-2xl md:text-3xl font-black tracking-tight text-white">
             Milwaukee <span className="text-harley-orange">Harley-Davidson</span>
@@ -82,9 +148,9 @@ export default function DisplayClient() {
       </header>
 
       {/* Main Content */}
-      <main className="relative z-10 flex-1 flex flex-col px-8 py-10">
+      <main className="relative z-10 flex-1 flex flex-col px-8 py-10 min-h-0">
         {/* Logo + Title */}
-        <div className="text-center mb-10">
+        <div className="text-center mb-10 flex-shrink-0">
           <img
             src="/mkehd2.png"
             alt="Milwaukee Harley-Davidson"
@@ -104,7 +170,7 @@ export default function DisplayClient() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
               transition={{ type: "spring", duration: 0.5 }}
-              className="glow-orange-strong rounded-2xl bg-iron-panel/80 border border-harley-orange/30 px-10 py-6 mb-8 flex items-center justify-between"
+              className="glow-orange-strong rounded-2xl bg-iron-panel/80 border border-harley-orange/30 px-10 py-6 mb-8 flex items-center justify-between flex-shrink-0"
             >
               <div className="flex items-center gap-5">
                 <span className="relative flex h-4 w-4">
@@ -122,58 +188,71 @@ export default function DisplayClient() {
           )}
         </AnimatePresence>
 
-        {/* Appointment List */}
-        <div className="flex-1">
-          {waiting.length === 0 && !serving ? (
-            <div className="flex flex-col items-center justify-center py-20 text-gray-600">
-              <h3 className="text-4xl font-bold tracking-tight">No Appointments</h3>
-              <p className="mt-3 text-lg">The queue is currently empty</p>
-            </div>
-          ) : (
-            <div className="grid gap-3">
-              <AnimatePresence>
-                {waiting.map((item, index) => (
-                  <motion.div
-                    key={item.id}
-                    layout
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: 20 }}
-                    transition={{ delay: index * 0.03 }}
-                    className={`
-                      flex items-center px-8 py-5 rounded-2xl border transition-all duration-300
-                      ${
-                        index === 0
-                          ? "bg-iron-panel border-harley-orange/20 shadow-lg"
-                          : "bg-iron-dark/60 border-iron-border/40"
-                      }
-                    `}
-                  >
-                    <span
+        {/* Appointment List — auto-scrolls when overflowing */}
+        <div
+          ref={scrollContainerRef}
+          className="flex-1 min-h-0 overflow-hidden relative"
+        >
+          {/* Fade edges when scrolling */}
+          {needsScroll && (
+            <>
+              <div className="absolute top-0 left-0 right-0 h-8 bg-gradient-to-b from-iron-black to-transparent z-10 pointer-events-none" />
+              <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-iron-black to-transparent z-10 pointer-events-none" />
+            </>
+          )}
+
+          <div ref={listRef}>
+            {waiting.length === 0 && !serving ? (
+              <div className="flex flex-col items-center justify-center py-20 text-gray-600">
+                <h3 className="text-4xl font-bold tracking-tight">No Appointments</h3>
+                <p className="mt-3 text-lg">The queue is currently empty</p>
+              </div>
+            ) : (
+              <div className="grid gap-3">
+                <AnimatePresence>
+                  {waiting.map((item, index) => (
+                    <motion.div
+                      key={item.id}
+                      layout
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: 20 }}
+                      transition={{ delay: index * 0.03 }}
                       className={`
-                        text-2xl font-black w-12 text-center
-                        ${index === 0 ? "text-harley-orange" : "text-gray-600"}
+                        flex items-center px-8 py-5 rounded-2xl border transition-all duration-300
+                        ${
+                          index === 0
+                            ? "bg-iron-panel border-harley-orange/20 shadow-lg"
+                            : "bg-iron-dark/60 border-iron-border/40"
+                        }
                       `}
                     >
-                      {index + 1}
-                    </span>
-                    <h3
-                      className={`text-2xl md:text-3xl font-bold tracking-tight ${
-                        index === 0 ? "text-white" : "text-gray-300"
-                      }`}
-                    >
-                      {item.name}
-                    </h3>
-                  </motion.div>
-                ))}
-              </AnimatePresence>
-            </div>
-          )}
+                      <span
+                        className={`
+                          text-2xl font-black w-12 text-center
+                          ${index === 0 ? "text-harley-orange" : "text-gray-600"}
+                        `}
+                      >
+                        {index + 1}
+                      </span>
+                      <h3
+                        className={`text-2xl md:text-3xl font-bold tracking-tight ${
+                          index === 0 ? "text-white" : "text-gray-300"
+                        }`}
+                      >
+                        {item.name}
+                      </h3>
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+              </div>
+            )}
+          </div>
         </div>
       </main>
 
       {/* Footer */}
-      <footer className="relative z-10 px-8 py-4 border-t border-iron-border/30 flex items-center justify-between">
+      <footer className="relative z-10 px-8 py-4 border-t border-iron-border/30 flex items-center justify-between flex-shrink-0">
         <span className="text-xs text-gray-600 uppercase tracking-widest">
           {waiting.length} in queue
         </span>
