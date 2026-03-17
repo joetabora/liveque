@@ -1,26 +1,65 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@theme {
+  --color-iron-black: #0a0a0a;
+  --color-iron-dark: #141414;
+  --color-iron-panel: #1a1a1a;
+  --color-iron-border: #2a2a2a;
+  --color-iron-muted: #666666;
+  --color-harley-orange: #ff6600;
+  --color-harley-orange-dark: #cc5200;
+  --color-harley-glow: rgba(255, 102, 0, 0.3);
+  --font-heading: "Inter", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+@layer base {
+  body {
+    background-color: #0a0a0a;
+    color: #ffffff;
+  }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #141414;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #333;
+    border-radius: 3px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #555;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer utilities {
+  .glow-orange {
+    box-shadow: 0 0 20px rgba(255, 102, 0, 0.3), 0 0 40px rgba(255, 102, 0, 0.1);
+  }
+
+  .glow-orange-strong {
+    box-shadow: 0 0 30px rgba(255, 102, 0, 0.5), 0 0 60px rgba(255, 102, 0, 0.2);
+  }
+
+  .text-glow-orange {
+    text-shadow: 0 0 20px rgba(255, 102, 0, 0.5);
+  }
+
+  .animate-pulse-slow {
+    animation: pulse-slow 3s ease-in-out infinite;
+  }
+
+  @keyframes pulse-slow {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+  }
+
+  .gradient-border {
+    border-image: linear-gradient(to right, #ff6600, transparent) 1;
+  }
 }
