@@ -4,13 +4,10 @@ import { useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useQueue } from "@/hooks/useQueue";
 import { Clock } from "@/components/ui/Clock";
-import { Badge } from "@/components/ui/Badge";
-import { ESTIMATED_WAIT_MINUTES } from "@/lib/constants";
 
 export default function DisplayClient() {
   const { waiting, serving, loading, servingChanged, playNotification } =
     useQueue();
-  const upNext = waiting.slice(0, 5);
   const containerRef = useRef<HTMLDivElement>(null);
   const prevServingRef = useRef<string | null>(null);
 
@@ -35,7 +32,7 @@ export default function DisplayClient() {
         <div className="flex flex-col items-center gap-4">
           <div className="w-12 h-12 border-4 border-harley-orange border-t-transparent rounded-full animate-spin" />
           <span className="text-gray-500 uppercase tracking-widest text-sm">
-            Loading Queue
+            Loading
           </span>
         </div>
       </div>
@@ -60,10 +57,6 @@ export default function DisplayClient() {
             <span className="text-white">IRON</span>
             <span className="text-harley-orange">QUEUE</span>
           </h1>
-          <div className="h-8 w-px bg-iron-border" />
-          <span className="text-sm font-semibold uppercase tracking-[0.3em] text-gray-500">
-            Service Queue
-          </span>
         </div>
         <div className="flex items-center gap-6">
           <Clock className="text-2xl text-gray-400" />
@@ -90,118 +83,89 @@ export default function DisplayClient() {
       </header>
 
       {/* Main Content */}
-      <main className="relative z-10 flex-1 flex flex-col items-center justify-center px-8 py-12 gap-16">
-        {/* NOW SERVING */}
-        <section className="w-full max-w-4xl text-center">
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="mb-6"
-          >
-            <Badge variant="orange" pulse={!!serving}>
-              Now Serving
-            </Badge>
-          </motion.div>
+      <main className="relative z-10 flex-1 flex flex-col px-8 py-10">
+        {/* Title */}
+        <div className="text-center mb-10">
+          <h2 className="text-5xl md:text-6xl lg:text-7xl font-black tracking-tight text-white">
+            Appointments <span className="text-harley-orange">Today!</span>
+          </h2>
+        </div>
 
-          <AnimatePresence mode="wait">
-            {serving ? (
-              <motion.div
-                key={serving.id}
-                initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.9, y: -20 }}
-                transition={{ type: "spring", duration: 0.6 }}
-                className="glow-orange-strong rounded-3xl bg-iron-panel/80 border border-harley-orange/30 px-16 py-12"
-              >
-                <h2 className="text-7xl md:text-8xl lg:text-9xl font-black tracking-tight text-white text-glow-orange leading-none">
-                  {serving.name}
-                </h2>
-                {serving.serviceType && (
-                  <p className="mt-6 text-xl md:text-2xl text-harley-orange font-semibold uppercase tracking-widest">
-                    {serving.serviceType}
-                  </p>
-                )}
-              </motion.div>
-            ) : (
-              <motion.div
-                key="empty"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="rounded-3xl bg-iron-panel/40 border border-iron-border/50 px-16 py-12"
-              >
-                <h2 className="text-5xl md:text-6xl font-bold text-gray-600 tracking-tight">
-                  Queue Empty
-                </h2>
-                <p className="mt-4 text-lg text-gray-600">
-                  No one is currently being served
-                </p>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </section>
+        {/* Now Serving Banner */}
+        <AnimatePresence mode="wait">
+          {serving && (
+            <motion.div
+              key={serving.id}
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ type: "spring", duration: 0.5 }}
+              className="glow-orange-strong rounded-2xl bg-iron-panel/80 border border-harley-orange/30 px-10 py-6 mb-8 flex items-center justify-between"
+            >
+              <div className="flex items-center gap-5">
+                <span className="relative flex h-4 w-4">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-harley-orange opacity-75" />
+                  <span className="relative inline-flex rounded-full h-4 w-4 bg-harley-orange" />
+                </span>
+                <span className="text-lg font-bold uppercase tracking-widest text-harley-orange">
+                  Now Serving
+                </span>
+              </div>
+              <h3 className="text-4xl md:text-5xl lg:text-6xl font-black text-white text-glow-orange">
+                {serving.name}
+              </h3>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-        {/* UP NEXT */}
-        {upNext.length > 0 && (
-          <section className="w-full max-w-4xl">
-            <div className="text-center mb-8">
-              <Badge variant="gray">Up Next</Badge>
+        {/* Appointment List */}
+        <div className="flex-1">
+          {waiting.length === 0 && !serving ? (
+            <div className="flex flex-col items-center justify-center py-20 text-gray-600">
+              <h3 className="text-4xl font-bold tracking-tight">No Appointments</h3>
+              <p className="mt-3 text-lg">The queue is currently empty</p>
             </div>
-            <div className="grid gap-4">
+          ) : (
+            <div className="grid gap-3">
               <AnimatePresence>
-                {upNext.map((item, index) => (
+                {waiting.map((item, index) => (
                   <motion.div
                     key={item.id}
                     layout
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: 20 }}
-                    transition={{ delay: index * 0.05 }}
+                    transition={{ delay: index * 0.03 }}
                     className={`
-                      flex items-center justify-between px-8 py-5 rounded-2xl
-                      border transition-all duration-300
+                      flex items-center px-8 py-5 rounded-2xl border transition-all duration-300
                       ${
                         index === 0
                           ? "bg-iron-panel border-harley-orange/20 shadow-lg"
-                          : "bg-iron-dark border-iron-border/50"
+                          : "bg-iron-dark/60 border-iron-border/40"
                       }
                     `}
                   >
-                    <div className="flex items-center gap-6">
-                      <span
-                        className={`
-                          text-2xl font-black w-10 text-center
-                          ${index === 0 ? "text-harley-orange" : "text-gray-600"}
-                        `}
-                      >
-                        {index + 1}
-                      </span>
-                      <div>
-                        <h3
-                          className={`text-2xl md:text-3xl font-bold tracking-tight ${
-                            index === 0 ? "text-white" : "text-gray-300"
-                          }`}
-                        >
-                          {item.name}
-                        </h3>
-                        {item.serviceType && (
-                          <p className="text-sm text-gray-500 uppercase tracking-wider mt-1">
-                            {item.serviceType}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <span className="text-sm text-gray-500">
-                        ~{ESTIMATED_WAIT_MINUTES * (index + 1)} min
-                      </span>
-                    </div>
+                    <span
+                      className={`
+                        text-2xl font-black w-12 text-center
+                        ${index === 0 ? "text-harley-orange" : "text-gray-600"}
+                      `}
+                    >
+                      {index + 1}
+                    </span>
+                    <h3
+                      className={`text-2xl md:text-3xl font-bold tracking-tight ${
+                        index === 0 ? "text-white" : "text-gray-300"
+                      }`}
+                    >
+                      {item.name}
+                    </h3>
                   </motion.div>
                 ))}
               </AnimatePresence>
             </div>
-          </section>
-        )}
+          )}
+        </div>
       </main>
 
       {/* Footer */}

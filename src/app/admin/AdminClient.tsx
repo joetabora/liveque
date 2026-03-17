@@ -24,12 +24,9 @@ import {
   clearQueue,
   reorderQueue,
 } from "@/lib/queue-operations";
-import { SERVICE_TYPES } from "@/lib/types";
-
 export default function AdminClient() {
   const { waiting, serving, loading } = useQueue();
   const [name, setName] = useState("");
-  const [serviceType, setServiceType] = useState("");
   const [addLoading, setAddLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
@@ -38,19 +35,15 @@ export default function AdminClient() {
     if (!name.trim()) return;
     setAddLoading(true);
     try {
-      await addToQueue({
-        name: name.trim(),
-        serviceType: serviceType || undefined,
-      });
+      await addToQueue({ name: name.trim() });
       setName("");
-      setServiceType("");
     } catch (err) {
       console.error("Failed to add to queue:", err);
       alert("Failed to add — check browser console for details.");
     } finally {
       setAddLoading(false);
     }
-  }, [name, serviceType]);
+  }, [name]);
 
   const handleAction = useCallback(
     async (id: string, action: () => Promise<unknown>) => {
@@ -189,23 +182,6 @@ export default function AdminClient() {
                     autoFocus
                   />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-400 mb-1.5">
-                    Service Type
-                  </label>
-                  <select
-                    value={serviceType}
-                    onChange={(e) => setServiceType(e.target.value)}
-                    className="w-full bg-iron-dark border border-iron-border rounded-xl px-4 py-3 text-white appearance-none focus:outline-none focus:border-harley-orange/50 focus:ring-1 focus:ring-harley-orange/30 transition-all cursor-pointer"
-                  >
-                    <option value="">Select service (optional)</option>
-                    {SERVICE_TYPES.map((type) => (
-                      <option key={type} value={type}>
-                        {type}
-                      </option>
-                    ))}
-                  </select>
-                </div>
                 <Button
                   type="submit"
                   size="lg"
@@ -235,11 +211,6 @@ export default function AdminClient() {
                       <h3 className="text-4xl font-black text-harley-orange text-glow-orange">
                         {serving.name}
                       </h3>
-                      {serving.serviceType && (
-                        <p className="text-sm text-gray-400 mt-2 uppercase tracking-wider">
-                          {serving.serviceType}
-                        </p>
-                      )}
                     </div>
                     <Button
                       variant="secondary"
@@ -348,11 +319,6 @@ export default function AdminClient() {
                                   <h3 className="text-lg font-bold text-white truncate">
                                     {item.name}
                                   </h3>
-                                  {item.serviceType && (
-                                    <p className="text-xs text-gray-500 uppercase tracking-wider">
-                                      {item.serviceType}
-                                    </p>
-                                  )}
                                 </div>
 
                                 {/* Actions */}
