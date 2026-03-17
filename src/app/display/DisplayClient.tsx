@@ -86,7 +86,7 @@ export default function DisplayClient() {
         {/* Logo + Title */}
         <div className="text-center mb-10">
           <img
-            src="/mkehd.png"
+            src="/mkehd2.png"
             alt="Milwaukee Harley-Davidson"
             className="mx-auto h-56 md:h-72 lg:h-88 w-auto mb-6 object-contain"
           />
