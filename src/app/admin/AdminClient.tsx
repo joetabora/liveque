@@ -44,6 +44,9 @@ export default function AdminClient() {
       });
       setName("");
       setServiceType("");
+    } catch (err) {
+      console.error("Failed to add to queue:", err);
+      alert("Failed to add — check browser console for details.");
     } finally {
       setAddLoading(false);
     }
@@ -54,6 +57,9 @@ export default function AdminClient() {
       setActionLoading(id);
       try {
         await action();
+      } catch (err) {
+        console.error("Action failed:", err);
+        alert("Action failed — check browser console for details.");
       } finally {
         setActionLoading(null);
       }
