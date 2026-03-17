@@ -83,8 +83,13 @@ export default function DisplayClient() {
 
       {/* Main Content */}
       <main className="relative z-10 flex-1 flex flex-col px-8 py-10">
-        {/* Title */}
+        {/* Logo + Title */}
         <div className="text-center mb-10">
+          <img
+            src="/mkehd.png"
+            alt="Milwaukee Harley-Davidson"
+            className="mx-auto h-28 md:h-36 lg:h-44 w-auto mb-6 object-contain"
+          />
           <h2 className="text-5xl md:text-6xl lg:text-7xl font-black tracking-tight text-white">
             Appointments <span className="text-harley-orange">Today!</span>
           </h2>
