@@ -139,11 +139,11 @@ export default function DisplayClient() {
       {/* Split Layout */}
       <main className="relative z-10 flex-1 flex min-h-0">
         {/* Left Side — Logo + Title */}
-        <div className="w-2/5 flex flex-col items-center justify-center px-8 border-r border-iron-border/30">
+        <div className="w-1/2 flex flex-col items-center justify-center px-8 border-r border-iron-border/30">
           <img
             src="/mkehd2.png"
             alt="Milwaukee Harley-Davidson"
-            className="w-full max-w-md h-auto mb-8 object-contain"
+            className="w-full max-w-2xl h-auto mb-8 object-contain"
           />
           <h2 className="text-4xl md:text-5xl lg:text-6xl font-black tracking-tight text-white text-center leading-tight">
             Today&apos;s
@@ -157,7 +157,7 @@ export default function DisplayClient() {
         </div>
 
         {/* Right Side — Names List */}
-        <div className="w-3/5 flex flex-col min-h-0 px-6 py-6">
+        <div className="w-1/2 flex flex-col min-h-0 px-6 py-6">
           {/* Now Serving Banner */}
           <AnimatePresence mode="wait">
             {serving && (
