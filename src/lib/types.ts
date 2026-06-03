@@ -5,6 +5,7 @@ export type QueueStatus = "waiting" | "serving" | "done";
 export interface QueueItem {
   id: string;
   name: string;
+  hereToSee?: string;
   serviceType?: string;
   status: QueueStatus;
   position: number;
@@ -13,6 +14,7 @@ export interface QueueItem {
 
 export interface QueueItemInput {
   name: string;
+  hereToSee?: string;
   serviceType?: string;
 }
 

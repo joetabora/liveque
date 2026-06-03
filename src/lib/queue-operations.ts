@@ -23,6 +23,7 @@ function queueRef() {
 export async function addToQueue(input: QueueItemInput): Promise<string> {
   const docRef = await addDoc(queueRef(), {
     name: input.name,
+    hereToSee: input.hereToSee?.trim() || null,
     serviceType: input.serviceType || null,
     status: "waiting",
     position: Date.now(),

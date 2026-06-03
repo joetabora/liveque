@@ -27,6 +27,7 @@ import {
 export default function AdminClient() {
   const { waiting, serving, loading } = useQueue();
   const [name, setName] = useState("");
+  const [hereToSee, setHereToSee] = useState("");
   const [addLoading, setAddLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
@@ -35,15 +36,19 @@ export default function AdminClient() {
     if (!name.trim()) return;
     setAddLoading(true);
     try {
-      await addToQueue({ name: name.trim() });
+      await addToQueue({
+        name: name.trim(),
+        hereToSee: hereToSee.trim() || undefined,
+      });
       setName("");
+      setHereToSee("");
     } catch (err) {
       console.error("Failed to add to queue:", err);
       alert("Failed to add — check browser console for details.");
     } finally {
       setAddLoading(false);
     }
-  }, [name]);
+  }, [name, hereToSee]);
 
   const handleAction = useCallback(
     async (id: string, action: () => Promise<unknown>) => {
@@ -182,6 +187,18 @@ export default function AdminClient() {
                     autoFocus
                   />
                 </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-400 mb-1.5">
+                    Here to see
+                  </label>
+                  <input
+                    type="text"
+                    value={hereToSee}
+                    onChange={(e) => setHereToSee(e.target.value)}
+                    placeholder="e.g. Mike, Sales desk"
+                    className="w-full bg-iron-dark border border-iron-border rounded-xl px-4 py-3 text-white text-lg placeholder-gray-600 focus:outline-none focus:border-harley-orange/50 focus:ring-1 focus:ring-harley-orange/30 transition-all"
+                  />
+                </div>
                 <Button
                   type="submit"
                   size="lg"
@@ -211,6 +228,14 @@ export default function AdminClient() {
                       <h3 className="text-4xl font-black text-harley-orange text-glow-orange">
                         {serving.name}
                       </h3>
+                      {serving.hereToSee && (
+                        <p className="mt-2 text-lg text-gray-400">
+                          Here to see{" "}
+                          <span className="text-white font-semibold">
+                            {serving.hereToSee}
+                          </span>
+                        </p>
+                      )}
                     </div>
                     <Button
                       variant="secondary"
@@ -319,6 +344,14 @@ export default function AdminClient() {
                                   <h3 className="text-lg font-bold text-white truncate">
                                     {item.name}
                                   </h3>
+                                  {item.hereToSee && (
+                                    <p className="text-sm text-gray-500 truncate">
+                                      Here to see{" "}
+                                      <span className="text-gray-300">
+                                        {item.hereToSee}
+                                      </span>
+                                    </p>
+                                  )}
                                 </div>
 
                                 {/* Actions */}

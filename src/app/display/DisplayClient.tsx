@@ -178,9 +178,19 @@ export default function DisplayClient() {
                     Now Serving
                   </span>
                 </div>
-                <h3 className="text-4xl md:text-5xl font-black text-white text-glow-orange">
-                  {serving.name}
-                </h3>
+                <div className="text-right">
+                  <h3 className="text-4xl md:text-5xl font-black text-white text-glow-orange">
+                    {serving.name}
+                  </h3>
+                  {serving.hereToSee && (
+                    <p className="mt-1 text-lg md:text-xl text-gray-400">
+                      Here to see{" "}
+                      <span className="text-white font-semibold">
+                        {serving.hereToSee}
+                      </span>
+                    </p>
+                  )}
+                </div>
               </motion.div>
             )}
           </AnimatePresence>
@@ -216,11 +226,21 @@ export default function DisplayClient() {
                         transition={{ delay: index * 0.03 }}
                         className="flex items-center px-8 py-5 rounded-2xl bg-gradient-to-r from-iron-panel/90 via-iron-panel/70 to-iron-panel/90 border border-iron-border/30 shadow-lg"
                       >
-                        <div className="flex items-center gap-4 w-full">
-                          <span className="text-harley-orange text-xl">★</span>
-                          <h3 className="text-3xl md:text-4xl lg:text-5xl font-black tracking-tight text-white">
-                            {item.name}
-                          </h3>
+                        <div className="flex items-center gap-4 w-full min-w-0">
+                          <span className="text-harley-orange text-xl flex-shrink-0">★</span>
+                          <div className="min-w-0">
+                            <h3 className="text-3xl md:text-4xl lg:text-5xl font-black tracking-tight text-white truncate">
+                              {item.name}
+                            </h3>
+                            {item.hereToSee && (
+                              <p className="mt-1 text-lg md:text-xl text-gray-400 truncate">
+                                Here to see{" "}
+                                <span className="text-gray-200 font-semibold">
+                                  {item.hereToSee}
+                                </span>
+                              </p>
+                            )}
+                          </div>
                         </div>
                       </motion.div>
                     ))}
