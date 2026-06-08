@@ -16,6 +16,7 @@ import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { IronQueueLogo } from "@/components/IronQueueLogo";
 import {
   addToQueue,
+  updateQueueItem,
   startService,
   completeService,
   callNext,
@@ -24,6 +25,11 @@ import {
   clearQueue,
   reorderQueue,
 } from "@/lib/queue-operations";
+import type { QueueItem } from "@/lib/types";
+
+const inputClass =
+  "w-full bg-iron-dark border border-iron-border rounded-xl px-4 py-2.5 text-white placeholder-gray-600 focus:outline-none focus:border-harley-orange/50 focus:ring-1 focus:ring-harley-orange/30 transition-all";
+
 export default function AdminClient() {
   const { waiting, serving, loading } = useQueue();
   const [name, setName] = useState("");
@@ -31,6 +37,38 @@ export default function AdminClient() {
   const [addLoading, setAddLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editHereToSee, setEditHereToSee] = useState("");
+
+  const startEdit = useCallback((item: QueueItem) => {
+    setEditingId(item.id);
+    setEditName(item.name);
+    setEditHereToSee(item.hereToSee ?? "");
+  }, []);
+
+  const cancelEdit = useCallback(() => {
+    setEditingId(null);
+    setEditName("");
+    setEditHereToSee("");
+  }, []);
+
+  const handleSaveEdit = useCallback(async () => {
+    if (!editingId || !editName.trim()) return;
+    setActionLoading(`edit-${editingId}`);
+    try {
+      await updateQueueItem(editingId, {
+        name: editName.trim(),
+        hereToSee: editHereToSee.trim() || undefined,
+      });
+      cancelEdit();
+    } catch (err) {
+      console.error("Failed to update:", err);
+      alert("Failed to save — check browser console for details.");
+    } finally {
+      setActionLoading(null);
+    }
+  }, [editingId, editName, editHereToSee, cancelEdit]);
 
   const handleAdd = useCallback(async () => {
     if (!name.trim()) return;
@@ -224,32 +262,99 @@ export default function AdminClient() {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
                   >
-                    <div className="text-center py-4">
-                      <h3 className="text-4xl font-black text-harley-orange text-glow-orange">
-                        {serving.name}
-                      </h3>
-                      {serving.hereToSee && (
-                        <p className="mt-2 text-lg text-gray-400">
-                          Here to see{" "}
-                          <span className="text-white font-semibold">
-                            {serving.hereToSee}
-                          </span>
-                        </p>
-                      )}
-                    </div>
-                    <Button
-                      variant="secondary"
-                      size="lg"
-                      className="w-full mt-4"
-                      onClick={() =>
-                        handleAction(serving.id, () =>
-                          completeService(serving.id)
-                        )
-                      }
-                      loading={actionLoading === serving.id}
-                    >
-                      ✓ Complete Service
-                    </Button>
+                    {editingId === serving.id ? (
+                      <form
+                        className="space-y-3"
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          handleSaveEdit();
+                        }}
+                      >
+                        <div>
+                          <label className="block text-sm font-medium text-gray-400 mb-1.5">
+                            Name / Ticket #
+                          </label>
+                          <input
+                            type="text"
+                            value={editName}
+                            onChange={(e) => setEditName(e.target.value)}
+                            className={`${inputClass} text-lg`}
+                            autoFocus
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-400 mb-1.5">
+                            Here to see
+                          </label>
+                          <input
+                            type="text"
+                            value={editHereToSee}
+                            onChange={(e) => setEditHereToSee(e.target.value)}
+                            placeholder="e.g. Mike, Sales desk"
+                            className={inputClass}
+                          />
+                        </div>
+                        <div className="flex gap-2 pt-1">
+                          <Button
+                            type="submit"
+                            size="md"
+                            className="flex-1"
+                            loading={actionLoading === `edit-${serving.id}`}
+                            disabled={!editName.trim()}
+                          >
+                            Save
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="md"
+                            onClick={cancelEdit}
+                            disabled={actionLoading === `edit-${serving.id}`}
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      </form>
+                    ) : (
+                      <>
+                        <div className="text-center py-4">
+                          <h3 className="text-4xl font-black text-harley-orange text-glow-orange">
+                            {serving.name}
+                          </h3>
+                          {serving.hereToSee && (
+                            <p className="mt-2 text-lg text-gray-400">
+                              Here to see{" "}
+                              <span className="text-white font-semibold">
+                                {serving.hereToSee}
+                              </span>
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex flex-col gap-2 mt-4">
+                          <Button
+                            variant="secondary"
+                            size="lg"
+                            className="w-full"
+                            onClick={() =>
+                              handleAction(serving.id, () =>
+                                completeService(serving.id)
+                              )
+                            }
+                            loading={actionLoading === serving.id}
+                          >
+                            ✓ Complete Service
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="md"
+                            className="w-full"
+                            onClick={() => startEdit(serving)}
+                          >
+                            Edit
+                          </Button>
+                        </div>
+                      </>
+                    )}
                   </motion.div>
                 ) : (
                   <motion.div
@@ -274,7 +379,7 @@ export default function AdminClient() {
                   Waiting Queue
                 </h2>
                 <span className="text-sm text-gray-500">
-                  Drag to reorder
+                  {editingId ? "Finish editing to reorder" : "Drag to reorder"}
                 </span>
               </div>
 
@@ -310,92 +415,177 @@ export default function AdminClient() {
                             key={item.id}
                             draggableId={item.id}
                             index={index}
+                            isDragDisabled={!!editingId}
                           >
                             {(provided, snapshot) => (
                               <div
                                 ref={provided.innerRef}
                                 {...provided.draggableProps}
                                 className={`
-                                  flex items-center gap-4 p-4 rounded-xl border transition-all
+                                  p-4 rounded-xl border transition-all
                                   ${
-                                    snapshot.isDragging
-                                      ? "bg-iron-dark border-harley-orange/40 shadow-xl glow-orange"
-                                      : "bg-iron-dark/50 border-iron-border/50 hover:border-iron-border"
+                                    editingId === item.id
+                                      ? "bg-iron-dark border-harley-orange/40"
+                                      : snapshot.isDragging
+                                        ? "bg-iron-dark border-harley-orange/40 shadow-xl glow-orange"
+                                        : "bg-iron-dark/50 border-iron-border/50 hover:border-iron-border"
                                   }
                                 `}
                               >
-                                {/* Drag handle */}
-                                <div
-                                  {...provided.dragHandleProps}
-                                  className="text-gray-600 hover:text-gray-400 cursor-grab active:cursor-grabbing p-1"
-                                >
-                                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                                    <path d="M8 6h2v2H8V6zm6 0h2v2h-2V6zM8 11h2v2H8v-2zm6 0h2v2h-2v-2zm-6 5h2v2H8v-2zm6 0h2v2h-2v-2z" />
-                                  </svg>
-                                </div>
-
-                                {/* Position number */}
-                                <span className="text-lg font-black text-gray-600 w-8 text-center">
-                                  {index + 1}
-                                </span>
-
-                                {/* Info */}
-                                <div className="flex-1 min-w-0">
-                                  <h3 className="text-lg font-bold text-white truncate">
-                                    {item.name}
-                                  </h3>
-                                  {item.hereToSee && (
-                                    <p className="text-sm text-gray-500 truncate">
-                                      Here to see{" "}
-                                      <span className="text-gray-300">
-                                        {item.hereToSee}
+                                {editingId === item.id ? (
+                                  <form
+                                    className="space-y-3"
+                                    onSubmit={(e) => {
+                                      e.preventDefault();
+                                      handleSaveEdit();
+                                    }}
+                                  >
+                                    <div className="flex items-center gap-3">
+                                      <span className="text-lg font-black text-gray-600 w-8 text-center flex-shrink-0">
+                                        {index + 1}
                                       </span>
-                                    </p>
-                                  )}
-                                </div>
+                                      <div className="flex-1 space-y-3">
+                                        <div>
+                                          <label className="block text-xs font-medium text-gray-500 mb-1">
+                                            Name / Ticket #
+                                          </label>
+                                          <input
+                                            type="text"
+                                            value={editName}
+                                            onChange={(e) =>
+                                              setEditName(e.target.value)
+                                            }
+                                            className={inputClass}
+                                            autoFocus
+                                          />
+                                        </div>
+                                        <div>
+                                          <label className="block text-xs font-medium text-gray-500 mb-1">
+                                            Here to see
+                                          </label>
+                                          <input
+                                            type="text"
+                                            value={editHereToSee}
+                                            onChange={(e) =>
+                                              setEditHereToSee(e.target.value)
+                                            }
+                                            placeholder="e.g. Mike, Sales desk"
+                                            className={inputClass}
+                                          />
+                                        </div>
+                                      </div>
+                                    </div>
+                                    <div className="flex justify-end gap-2">
+                                      <Button
+                                        type="submit"
+                                        size="sm"
+                                        loading={
+                                          actionLoading === `edit-${item.id}`
+                                        }
+                                        disabled={!editName.trim()}
+                                      >
+                                        Save
+                                      </Button>
+                                      <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={cancelEdit}
+                                        disabled={
+                                          actionLoading === `edit-${item.id}`
+                                        }
+                                      >
+                                        Cancel
+                                      </Button>
+                                    </div>
+                                  </form>
+                                ) : (
+                                  <div className="flex items-center gap-4">
+                                    <div
+                                      {...provided.dragHandleProps}
+                                      className="text-gray-600 hover:text-gray-400 cursor-grab active:cursor-grabbing p-1"
+                                    >
+                                      <svg
+                                        className="w-5 h-5"
+                                        fill="currentColor"
+                                        viewBox="0 0 24 24"
+                                      >
+                                        <path d="M8 6h2v2H8V6zm6 0h2v2h-2V6zM8 11h2v2H8v-2zm6 0h2v2h-2v-2zm-6 5h2v2H8v-2zm6 0h2v2h-2v-2z" />
+                                      </svg>
+                                    </div>
 
-                                {/* Actions */}
-                                <div className="flex items-center gap-2 flex-shrink-0">
-                                  <Button
-                                    size="sm"
-                                    onClick={() =>
-                                      handleAction(item.id, () =>
-                                        startService(item.id)
-                                      )
-                                    }
-                                    loading={actionLoading === item.id}
-                                  >
-                                    Serve
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() =>
-                                      handleAction(
-                                        `skip-${item.id}`,
-                                        () => skipItem(item.id)
-                                      )
-                                    }
-                                    loading={actionLoading === `skip-${item.id}`}
-                                    title="Move to bottom"
-                                  >
-                                    Skip
-                                  </Button>
-                                  <Button
-                                    variant="danger"
-                                    size="sm"
-                                    onClick={() =>
-                                      handleAction(
-                                        `rm-${item.id}`,
-                                        () => removeItem(item.id)
-                                      )
-                                    }
-                                    loading={actionLoading === `rm-${item.id}`}
-                                    title="Remove from queue"
-                                  >
-                                    ✕
-                                  </Button>
-                                </div>
+                                    <span className="text-lg font-black text-gray-600 w-8 text-center">
+                                      {index + 1}
+                                    </span>
+
+                                    <div className="flex-1 min-w-0">
+                                      <h3 className="text-lg font-bold text-white truncate">
+                                        {item.name}
+                                      </h3>
+                                      {item.hereToSee && (
+                                        <p className="text-sm text-gray-500 truncate">
+                                          Here to see{" "}
+                                          <span className="text-gray-300">
+                                            {item.hereToSee}
+                                          </span>
+                                        </p>
+                                      )}
+                                    </div>
+
+                                    <div className="flex items-center gap-2 flex-shrink-0 flex-wrap justify-end">
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => startEdit(item)}
+                                      >
+                                        Edit
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        onClick={() =>
+                                          handleAction(item.id, () =>
+                                            startService(item.id)
+                                          )
+                                        }
+                                        loading={actionLoading === item.id}
+                                      >
+                                        Serve
+                                      </Button>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() =>
+                                          handleAction(
+                                            `skip-${item.id}`,
+                                            () => skipItem(item.id)
+                                          )
+                                        }
+                                        loading={
+                                          actionLoading === `skip-${item.id}`
+                                        }
+                                        title="Move to bottom"
+                                      >
+                                        Skip
+                                      </Button>
+                                      <Button
+                                        variant="danger"
+                                        size="sm"
+                                        onClick={() =>
+                                          handleAction(
+                                            `rm-${item.id}`,
+                                            () => removeItem(item.id)
+                                          )
+                                        }
+                                        loading={
+                                          actionLoading === `rm-${item.id}`
+                                        }
+                                        title="Remove from queue"
+                                      >
+                                        ✕
+                                      </Button>
+                                    </div>
+                                  </div>
+                                )}
                               </div>
                             )}
                           </Draggable>

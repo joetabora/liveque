@@ -18,6 +18,11 @@ export interface QueueItemInput {
   serviceType?: string;
 }
 
+export interface QueueItemUpdate {
+  name: string;
+  hereToSee?: string;
+}
+
 export const SERVICE_TYPES = [
   "Sales",
   "Oil Change",

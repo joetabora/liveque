@@ -14,7 +14,7 @@ import {
 } from "firebase/firestore";
 import { getDb } from "./firebase";
 import { COLLECTION_NAME } from "./constants";
-import type { QueueItem, QueueItemInput } from "./types";
+import type { QueueItemInput, QueueItemUpdate } from "./types";
 
 function queueRef() {
   return collection(getDb(), COLLECTION_NAME);
@@ -30,6 +30,19 @@ export async function addToQueue(input: QueueItemInput): Promise<string> {
     createdAt: serverTimestamp(),
   });
   return docRef.id;
+}
+
+export async function updateQueueItem(
+  itemId: string,
+  input: QueueItemUpdate
+): Promise<void> {
+  const name = input.name.trim();
+  if (!name) throw new Error("Name is required");
+
+  await updateDoc(doc(getDb(), COLLECTION_NAME, itemId), {
+    name,
+    hereToSee: input.hereToSee?.trim() || null,
+  });
 }
 
 export async function startService(itemId: string): Promise<void> {
