@@ -1,7 +1,7 @@
-import "dotenv/config";
+import "./load-env";
 import { neon } from "@neondatabase/serverless";
 import { drizzle } from "drizzle-orm/neon-http";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import * as schema from "../src/db/schema";
 
@@ -10,6 +10,56 @@ const db = drizzle(sql, { schema });
 
 const MKEHD_SLUG = process.env.LEGACY_TENANT_SLUG ?? "mkehd";
 const SUPER_ADMIN_EMAIL = process.env.SUPER_ADMIN_EMAIL;
+const MKE_STAFF_EMAILS = (process.env.MKE_STAFF_EMAILS ?? "")
+  .split(",")
+  .map((e) => e.trim().toLowerCase())
+  .filter(Boolean);
+
+async function ensureStaffMemberships(tenantId: string) {
+  if (MKE_STAFF_EMAILS.length === 0) {
+    console.log(
+      "No MKE_STAFF_EMAILS set — sign up staff accounts, then re-run with MKE_STAFF_EMAILS=email@example.com"
+    );
+    return;
+  }
+
+  for (const email of MKE_STAFF_EMAILS) {
+    const [user] = await db
+      .select()
+      .from(schema.users)
+      .where(eq(schema.users.email, email))
+      .limit(1);
+
+    if (!user) {
+      console.log(`Staff email ${email} not found — sign up first, then re-run seed`);
+      continue;
+    }
+
+    const [existing] = await db
+      .select()
+      .from(schema.memberships)
+      .where(
+        and(
+          eq(schema.memberships.tenantId, tenantId),
+          eq(schema.memberships.userId, user.id)
+        )
+      )
+      .limit(1);
+
+    if (existing) {
+      console.log(`Membership already exists for ${email} (${existing.role})`);
+      continue;
+    }
+
+    await db.insert(schema.memberships).values({
+      tenantId,
+      userId: user.id,
+      role: "owner",
+    });
+
+    console.log(`Granted owner membership to ${email} for tenant ${MKEHD_SLUG}`);
+  }
+}
 
 async function seed() {
   console.log("Seeding LiveQue database...");
@@ -22,6 +72,24 @@ async function seed() {
 
   if (existing) {
     console.log(`Tenant "${MKEHD_SLUG}" already exists (${existing.id})`);
+    await ensureStaffMemberships(existing.id);
+
+    if (SUPER_ADMIN_EMAIL) {
+      const [user] = await db
+        .select()
+        .from(schema.users)
+        .where(eq(schema.users.email, SUPER_ADMIN_EMAIL.toLowerCase()))
+        .limit(1);
+
+      if (user) {
+        await db
+          .insert(schema.platformAdmins)
+          .values({ userId: user.id })
+          .onConflictDoNothing();
+        console.log(`Granted platform admin to ${SUPER_ADMIN_EMAIL}`);
+      }
+    }
+
     return existing;
   }
 
@@ -78,6 +146,8 @@ async function seed() {
 
   console.log(`Created tenant "${MKEHD_SLUG}" with id ${tenant.id}`);
 
+  await ensureStaffMemberships(tenant.id);
+
   if (SUPER_ADMIN_EMAIL) {
     const [user] = await db
       .select()
@@ -92,7 +162,9 @@ async function seed() {
         .onConflictDoNothing();
       console.log(`Granted platform admin to ${SUPER_ADMIN_EMAIL}`);
     } else {
-      console.log(`Super admin email ${SUPER_ADMIN_EMAIL} not found — sign up first, then re-run seed`);
+      console.log(
+        `Super admin email ${SUPER_ADMIN_EMAIL} not found — sign up first, then re-run seed`
+      );
     }
   }
 

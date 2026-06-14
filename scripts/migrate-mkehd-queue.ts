@@ -1,4 +1,4 @@
-import "dotenv/config";
+import "./load-env";
 import { initializeApp, cert, getApps } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 import { neon } from "@neondatabase/serverless";

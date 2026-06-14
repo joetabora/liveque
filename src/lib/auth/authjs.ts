@@ -151,11 +151,13 @@ class AuthJsProvider implements AuthProvider {
       .where(eq(users.authProviderId, session.userId))
       .limit(1);
 
+    if (!appUser) throw new Error("User not found");
+
     return {
-      id: appUser?.id ?? session.userId,
+      id: appUser.id,
       email: session.email,
       name: session.name,
-      emailVerified: !!appUser?.emailVerifiedAt,
+      emailVerified: !!appUser.emailVerifiedAt,
     };
   }
 

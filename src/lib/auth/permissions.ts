@@ -15,8 +15,10 @@ const roleHierarchy: Record<MembershipRole, number> = {
 
 export async function requireAuth() {
   const provider = getAuthProvider();
-  const authUser = await provider.requireUser();
-  const appUser = await getAppUserByAuthId(authUser.id);
+  const session = await provider.getSession();
+  if (!session) throw new Error("Unauthorized");
+
+  const appUser = await getAppUserByAuthId(session.userId);
   if (!appUser) throw new Error("User not found");
   return appUser;
 }

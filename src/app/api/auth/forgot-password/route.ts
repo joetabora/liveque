@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { eq } from "drizzle-orm";
 import { Resend } from "resend";
 import { db } from "@/db";
-import { authUsers } from "@/db/schema";
+import { authUsers, authVerificationTokens } from "@/db/schema";
 import { handleApiError, jsonSuccess } from "@/lib/api-utils";
 import { z } from "zod";
 import { authRateLimit, checkRateLimit } from "@/lib/rate-limit";
@@ -29,8 +29,20 @@ export async function POST(request: NextRequest) {
       .limit(1);
 
     if (user && process.env.RESEND_API_KEY) {
-      const resend = new Resend(process.env.RESEND_API_KEY);
       const token = crypto.randomUUID();
+      const expires = new Date(Date.now() + 60 * 60 * 1000);
+
+      await db
+        .delete(authVerificationTokens)
+        .where(eq(authVerificationTokens.identifier, normalizedEmail));
+
+      await db.insert(authVerificationTokens).values({
+        identifier: normalizedEmail,
+        token,
+        expires,
+      });
+
+      const resend = new Resend(process.env.RESEND_API_KEY);
       const resetUrl = `${APP_URL}/reset-password?token=${token}&email=${encodeURIComponent(normalizedEmail)}`;
 
       await resend.emails.send({

@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import Stripe from "stripe";
 import { db } from "@/db";
 import { tenants, subscriptions } from "@/db/schema";
-import { getStripe, PLAN_AMOUNTS } from "@/lib/stripe/client";
+import { getStripe, PLAN_AMOUNTS, getPlanTierFromPriceId } from "@/lib/stripe/client";
 import { PLAN_LIMITS } from "@/lib/constants";
 import type { PlanTier } from "@/db/schema/subscriptions";
 import { jsonError, jsonSuccess } from "@/lib/api-utils";
@@ -96,17 +96,40 @@ export async function POST(request: NextRequest) {
           current_period_start?: number;
           current_period_end?: number;
         };
-        const tenantId = sub.metadata?.tenantId;
+
+        const priceId = sub.items.data[0]?.price.id;
+        const planTier =
+          getPlanTierFromPriceId(priceId) ??
+          (sub.metadata?.planTier as PlanTier | undefined);
+
+        const [existingSub] = await db
+          .select()
+          .from(subscriptions)
+          .where(eq(subscriptions.stripeSubscriptionId, sub.id))
+          .limit(1);
+
+        const tenantId = sub.metadata?.tenantId ?? existingSub?.tenantId;
 
         if (tenantId) {
+          const tenantUpdate: {
+            subscriptionStatus: string;
+            updatedAt: Date;
+            planTier?: PlanTier;
+          } = {
+            subscriptionStatus: sub.status,
+            updatedAt: new Date(),
+          };
+
+          if (planTier) {
+            tenantUpdate.planTier = planTier;
+          }
+
           await db
             .update(tenants)
-            .set({
-              subscriptionStatus: sub.status,
-              updatedAt: new Date(),
-            })
+            .set(tenantUpdate)
             .where(eq(tenants.id, tenantId));
 
+          const limits = planTier ? PLAN_LIMITS[planTier] : null;
           await db
             .update(subscriptions)
             .set({
@@ -118,6 +141,15 @@ export async function POST(request: NextRequest) {
               currentPeriodEnd: sub.current_period_end
                 ? new Date(sub.current_period_end * 1000)
                 : null,
+              ...(planTier ? { planTier } : {}),
+              ...(priceId ? { stripePriceId: priceId } : {}),
+              ...(limits
+                ? {
+                    locationLimit: limits.locations ?? 1,
+                    displayLimit: limits.displays,
+                    staffLimit: limits.staff,
+                  }
+                : {}),
               updatedAt: new Date(),
             })
             .where(eq(subscriptions.stripeSubscriptionId, sub.id));

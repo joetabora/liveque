@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
         trial_period_days: 14,
         metadata: { tenantId: tenant?.id ?? "", planTier },
       },
-      success_url: `${APP_URL}/${tenant?.slug ?? "onboarding"}/settings/billing?success=1`,
+      success_url: `${APP_URL}/onboarding/setup?slug=${tenant?.slug ?? ""}`,
       cancel_url: `${APP_URL}/onboarding/plan?canceled=1`,
       metadata: { tenantId: tenant?.id ?? "", planTier, userId: user.id },
     });

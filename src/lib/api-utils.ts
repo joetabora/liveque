@@ -13,6 +13,9 @@ export function handleApiError(error: unknown) {
     if (error.message === "Unauthorized") {
       return jsonError("Unauthorized", 401);
     }
+    if (error.message === "User not found") {
+      return jsonError("Unauthorized", 401);
+    }
     if (error.message === "Forbidden") {
       return jsonError("Forbidden", 403);
     }

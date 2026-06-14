@@ -20,6 +20,8 @@
 
 Copy `.env.local.example` to `.env.local` and fill in all values.
 
+For preview deployments on the `develop` branch, see [vercel-preview.md](vercel-preview.md).
+
 Critical for production:
 - `DATABASE_URL` — Neon connection string
 - `AUTH_SECRET` — `openssl rand -base64 32`
