@@ -1,21 +1,15 @@
-"use client";
+import { getTenantBySlugServer } from "@/lib/tenant-server";
+import { LEGACY_TENANT_SLUG, USE_LEGACY_QUEUE } from "@/lib/constants";
+import DisplayPageClient from "@/components/queue/DisplayPageClient";
 
-import dynamic from "next/dynamic";
+export default async function LegacyDisplayPage() {
+  const tenant = await getTenantBySlugServer(LEGACY_TENANT_SLUG);
 
-const DisplayClient = dynamic(() => import("./DisplayClient"), {
-  ssr: false,
-  loading: () => (
-    <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a]">
-      <div className="flex flex-col items-center gap-4">
-        <div className="w-12 h-12 border-4 border-[#0065a6] border-t-transparent rounded-full animate-spin" />
-        <span className="text-gray-500 uppercase tracking-widest text-sm">
-          Loading Queue
-        </span>
-      </div>
-    </div>
-  ),
-});
-
-export default function DisplayPage() {
-  return <DisplayClient />;
+  return (
+    <DisplayPageClient
+      slug={LEGACY_TENANT_SLUG}
+      tenantId={tenant?.id ?? null}
+      useLegacy={USE_LEGACY_QUEUE || !tenant}
+    />
+  );
 }

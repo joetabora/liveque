@@ -1,21 +1,16 @@
-"use client";
+import { getTenantBySlugServer } from "@/lib/tenant-server";
+import { LEGACY_TENANT_SLUG, USE_LEGACY_QUEUE } from "@/lib/constants";
+import AdminPageClient from "@/components/queue/AdminPageClient";
 
-import dynamic from "next/dynamic";
+export default async function LegacyAdminPage() {
+  const tenant = await getTenantBySlugServer(LEGACY_TENANT_SLUG);
 
-const AdminClient = dynamic(() => import("./AdminClient"), {
-  ssr: false,
-  loading: () => (
-    <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a]">
-      <div className="flex flex-col items-center gap-4">
-        <div className="w-12 h-12 border-4 border-[#0065a6] border-t-transparent rounded-full animate-spin" />
-        <span className="text-gray-500 uppercase tracking-widest text-sm">
-          Loading Dashboard
-        </span>
-      </div>
-    </div>
-  ),
-});
-
-export default function AdminPage() {
-  return <AdminClient />;
+  return (
+    <AdminPageClient
+      slug={LEGACY_TENANT_SLUG}
+      tenantId={tenant?.id ?? null}
+      displayPath="/display"
+      useLegacy={USE_LEGACY_QUEUE || !tenant}
+    />
+  );
 }

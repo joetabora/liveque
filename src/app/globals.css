@@ -9,6 +9,8 @@
   --color-harley-orange: #0065a6;
   --color-harley-orange-dark: #004f85;
   --color-harley-glow: rgba(0, 101, 166, 0.3);
+  --color-brand-primary: #0065a6;
+  --color-brand-accent: #004f85;
   --font-heading: "Inter", system-ui, sans-serif;
   --font-mono: "JetBrains Mono", monospace;
 }
@@ -47,6 +49,14 @@
   }
 
   .text-glow-orange {
+    text-shadow: 0 0 20px rgba(0, 101, 166, 0.5);
+  }
+
+  .glow-brand {
+    box-shadow: 0 0 20px rgba(0, 101, 166, 0.3), 0 0 40px rgba(0, 101, 166, 0.1);
+  }
+
+  .text-glow-brand {
     text-shadow: 0 0 20px rgba(0, 101, 166, 0.5);
   }
 

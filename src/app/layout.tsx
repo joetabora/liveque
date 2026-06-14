@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import { ToastProvider } from "@/components/ui/Toast";
+import { AuthProvider } from "@/components/providers/AuthProvider";
 import "./globals.css";
 
 const inter = Inter({
@@ -8,9 +10,9 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "IronQueue — Service Queue Display",
+  title: "LiveQue — Appointment Queue Platform",
   description:
-    "Premium real-time appointment and service queue display system for Harley-Davidson dealerships.",
+    "Real-time appointment and service queue display for dealerships, salons, clinics, and more.",
 };
 
 export default function RootLayout({
@@ -21,7 +23,9 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body className={`${inter.variable} font-sans antialiased bg-iron-black text-white`}>
-        {children}
+        <AuthProvider>
+          <ToastProvider>{children}</ToastProvider>
+        </AuthProvider>
       </body>
     </html>
   );

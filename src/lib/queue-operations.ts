@@ -1,120 +1,94 @@
-import {
-  collection,
-  doc,
-  addDoc,
-  updateDoc,
-  deleteDoc,
-  getDocs,
-  query,
-  where,
-  orderBy,
-  writeBatch,
-  serverTimestamp,
-  limit,
-} from "firebase/firestore";
-import { getDb } from "./firebase";
-import { COLLECTION_NAME } from "./constants";
-import type { QueueItemInput, QueueItemUpdate } from "./types";
+import type { QueueItemInput, QueueItemUpdate } from "@/lib/types";
 
-function queueRef() {
-  return collection(getDb(), COLLECTION_NAME);
+async function apiFetch(slug: string, path: string, options?: RequestInit) {
+  const res = await fetch(`/api/tenants/${slug}/queue${path}`, {
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...options?.headers,
+    },
+  });
+
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(data.error ?? `Request failed (${res.status})`);
+  }
+  return data;
 }
 
-export async function addToQueue(input: QueueItemInput): Promise<string> {
-  const docRef = await addDoc(queueRef(), {
-    name: input.name,
-    hereToSee: input.hereToSee?.trim() || null,
-    serviceType: input.serviceType || null,
-    status: "waiting",
-    position: Date.now(),
-    createdAt: serverTimestamp(),
+export async function addToQueue(
+  slug: string,
+  input: QueueItemInput
+): Promise<string> {
+  const data = await apiFetch(slug, "", {
+    method: "POST",
+    body: JSON.stringify(input),
   });
-  return docRef.id;
+  return data.id;
 }
 
 export async function updateQueueItem(
+  slug: string,
   itemId: string,
   input: QueueItemUpdate
 ): Promise<void> {
-  const name = input.name.trim();
-  if (!name) throw new Error("Name is required");
-
-  await updateDoc(doc(getDb(), COLLECTION_NAME, itemId), {
-    name,
-    hereToSee: input.hereToSee?.trim() || null,
+  await apiFetch(slug, `/items/${itemId}`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
   });
 }
 
-export async function startService(itemId: string): Promise<void> {
-  const db = getDb();
-  const servingQuery = query(queueRef(), where("status", "==", "serving"));
-  const servingSnapshot = await getDocs(servingQuery);
-
-  const batch = writeBatch(db);
-  servingSnapshot.docs.forEach((d) => {
-    batch.update(d.ref, { status: "done" });
-  });
-  batch.update(doc(db, COLLECTION_NAME, itemId), { status: "serving" });
-  await batch.commit();
+export async function startService(
+  slug: string,
+  itemId: string
+): Promise<void> {
+  await apiFetch(slug, `/items/${itemId}/serve`, { method: "POST" });
 }
 
-export async function completeService(itemId: string): Promise<void> {
-  await updateDoc(doc(getDb(), COLLECTION_NAME, itemId), { status: "done" });
+export async function completeService(
+  slug: string,
+  itemId: string
+): Promise<void> {
+  await apiFetch(slug, `/items/${itemId}/complete`, { method: "POST" });
 }
 
-export async function callNext(): Promise<boolean> {
-  const db = getDb();
-  const ref = queueRef();
-
-  const servingQuery = query(ref, where("status", "==", "serving"));
-  const waitingQuery = query(
-    ref,
-    where("status", "==", "waiting"),
-    orderBy("position", "asc"),
-    limit(1)
-  );
-
-  const [servingSnapshot, waitingSnapshot] = await Promise.all([
-    getDocs(servingQuery),
-    getDocs(waitingQuery),
-  ]);
-
-  if (waitingSnapshot.empty) return false;
-
-  const batch = writeBatch(db);
-  servingSnapshot.docs.forEach((d) => {
-    batch.update(d.ref, { status: "done" });
-  });
-  batch.update(waitingSnapshot.docs[0].ref, { status: "serving" });
-  await batch.commit();
-  return true;
+export async function callNext(slug: string): Promise<boolean> {
+  const data = await apiFetch(slug, "/call-next", { method: "POST" });
+  return data.called;
 }
 
-export async function skipItem(itemId: string): Promise<void> {
-  await updateDoc(doc(getDb(), COLLECTION_NAME, itemId), {
-    position: Date.now(),
-  });
+export async function skipItem(slug: string, itemId: string): Promise<void> {
+  await apiFetch(slug, `/items/${itemId}/skip`, { method: "POST" });
 }
 
-export async function removeItem(itemId: string): Promise<void> {
-  await deleteDoc(doc(getDb(), COLLECTION_NAME, itemId));
+export async function removeItem(slug: string, itemId: string): Promise<void> {
+  await apiFetch(slug, `/items/${itemId}`, { method: "DELETE" });
 }
 
-export async function clearQueue(): Promise<void> {
-  const db = getDb();
-  const snapshot = await getDocs(queueRef());
-  const batch = writeBatch(db);
-  snapshot.docs.forEach((d) => batch.delete(d.ref));
-  await batch.commit();
+export async function clearQueue(slug: string): Promise<void> {
+  await apiFetch(slug, "", { method: "DELETE" });
 }
 
 export async function reorderQueue(
+  slug: string,
   items: { id: string; position: number }[]
 ): Promise<void> {
-  const db = getDb();
-  const batch = writeBatch(db);
-  items.forEach(({ id, position }) => {
-    batch.update(doc(db, COLLECTION_NAME, id), { position });
+  await apiFetch(slug, "/reorder", {
+    method: "POST",
+    body: JSON.stringify({ items }),
   });
-  await batch.commit();
+}
+
+export async function checkIn(
+  slug: string,
+  input: QueueItemInput
+): Promise<string> {
+  const res = await fetch(`/api/tenants/${slug}/checkin`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error ?? "Check-in failed");
+  return data.id;
 }

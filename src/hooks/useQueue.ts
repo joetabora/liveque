@@ -9,19 +9,39 @@ import {
   onSnapshot,
 } from "firebase/firestore";
 import { getDb } from "@/lib/firebase";
-import { COLLECTION_NAME } from "@/lib/constants";
+import { COLLECTION_NAME, USE_LEGACY_QUEUE } from "@/lib/constants";
 import type { QueueItem } from "@/lib/types";
 
-export function useQueue() {
+interface UseQueueOptions {
+  tenantId?: string | null;
+  useLegacy?: boolean;
+}
+
+function getQueueCollectionPath(tenantId: string | null | undefined, useLegacy: boolean) {
+  if (useLegacy || !tenantId) {
+    return COLLECTION_NAME;
+  }
+  return `tenants/${tenantId}/queue`;
+}
+
+export function useQueue(options: UseQueueOptions = {}) {
+  const { tenantId = null, useLegacy = USE_LEGACY_QUEUE } = options;
   const [waiting, setWaiting] = useState<QueueItem[]>([]);
   const [serving, setServing] = useState<QueueItem | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [connected, setConnected] = useState(true);
   const prevServingId = useRef<string | null>(null);
   const [servingChanged, setServingChanged] = useState(false);
 
+  const collectionPath = getQueueCollectionPath(tenantId, useLegacy);
+
   useEffect(() => {
+    setLoading(true);
+    setError(null);
+
     const db = getDb();
-    const queueRef = collection(db, COLLECTION_NAME);
+    const queueRef = collection(db, collectionPath);
 
     const waitingQuery = query(
       queueRef,
@@ -40,6 +60,7 @@ export function useQueue() {
     const unsubWaiting = onSnapshot(
       waitingQuery,
       (snapshot) => {
+        setConnected(true);
         const items: QueueItem[] = snapshot.docs.map((d) => ({
           id: d.id,
           ...d.data(),
@@ -47,8 +68,10 @@ export function useQueue() {
         setWaiting(items);
         markLoaded();
       },
-      (error) => {
-        console.error("Waiting query error:", error);
+      (err) => {
+        console.error("Waiting query error:", err);
+        setError("Connection lost. Retrying...");
+        setConnected(false);
         markLoaded();
       }
     );
@@ -56,6 +79,7 @@ export function useQueue() {
     const unsubServing = onSnapshot(
       servingQuery,
       (snapshot) => {
+        setConnected(true);
         if (snapshot.empty) {
           setServing(null);
           prevServingId.current = null;
@@ -65,7 +89,10 @@ export function useQueue() {
             ...snapshot.docs[0].data(),
           } as QueueItem;
 
-          if (prevServingId.current !== null && prevServingId.current !== item.id) {
+          if (
+            prevServingId.current !== null &&
+            prevServingId.current !== item.id
+          ) {
             setServingChanged(true);
             setTimeout(() => setServingChanged(false), 3000);
           }
@@ -74,8 +101,10 @@ export function useQueue() {
         }
         markLoaded();
       },
-      (error) => {
-        console.error("Serving query error:", error);
+      (err) => {
+        console.error("Serving query error:", err);
+        setError("Connection lost. Retrying...");
+        setConnected(false);
         markLoaded();
       }
     );
@@ -84,7 +113,7 @@ export function useQueue() {
       unsubWaiting();
       unsubServing();
     };
-  }, []);
+  }, [collectionPath, tenantId, useLegacy]);
 
   const playNotification = useCallback(() => {
     try {
@@ -104,5 +133,13 @@ export function useQueue() {
     }
   }, []);
 
-  return { waiting, serving, loading, servingChanged, playNotification };
+  return {
+    waiting,
+    serving,
+    loading,
+    error,
+    connected,
+    servingChanged,
+    playNotification,
+  };
 }
