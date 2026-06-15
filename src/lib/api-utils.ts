@@ -40,6 +40,21 @@ export function handleApiError(error: unknown) {
         503
       );
     }
+    if (
+      error.message.includes("Firebase Admin is not configured") ||
+      error.message.includes("DECODER routines") ||
+      error.message.includes("PEM") ||
+      error.message.includes("UNAUTHENTICATED") ||
+      error.message.includes("invalid_grant")
+    ) {
+      return jsonError(
+        "Firebase Admin error. Check FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, and FIREBASE_PRIVATE_KEY in Vercel Preview env.",
+        503
+      );
+    }
+    if (error.message === "Subscription inactive. Please update billing.") {
+      return jsonError(error.message, 402);
+    }
     return jsonError(error.message, 500);
   }
   console.error("Unknown API error:", error);

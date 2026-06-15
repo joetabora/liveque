@@ -100,7 +100,9 @@ export default function AdminDashboard({
       setHereToSee("");
     } catch (err) {
       console.error("Failed to add to queue:", err);
-      toast("Failed to add customer", "error");
+      const message =
+        err instanceof Error ? err.message : "Failed to add customer";
+      toast(message, "error");
     } finally {
       setAddLoading(false);
     }

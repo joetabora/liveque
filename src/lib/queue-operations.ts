@@ -2,6 +2,7 @@ import type { QueueItemInput, QueueItemUpdate } from "@/lib/types";
 
 async function apiFetch(slug: string, path: string, options?: RequestInit) {
   const res = await fetch(`/api/tenants/${slug}/queue${path}`, {
+    credentials: "include",
     ...options,
     headers: {
       "Content-Type": "application/json",

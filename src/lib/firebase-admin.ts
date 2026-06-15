@@ -4,6 +4,32 @@ import { getFirestore, type Firestore, type CollectionReference } from "firebase
 let adminApp: App | null = null;
 let adminDb: Firestore | null = null;
 
+export function normalizePrivateKey(raw: string): string {
+  let key = raw.trim();
+  if (
+    (key.startsWith('"') && key.endsWith('"')) ||
+    (key.startsWith("'") && key.endsWith("'"))
+  ) {
+    key = key.slice(1, -1);
+  }
+  return key.replace(/\\n/g, "\n");
+}
+
+export function getFirebaseAdminConfig() {
+  const projectId = process.env.FIREBASE_PROJECT_ID?.trim();
+  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL?.trim();
+  const privateKeyRaw = process.env.FIREBASE_PRIVATE_KEY;
+  const privateKey = privateKeyRaw ? normalizePrivateKey(privateKeyRaw) : undefined;
+
+  return {
+    projectId,
+    clientEmail,
+    privateKey,
+    configured: !!(projectId && clientEmail && privateKey),
+    privateKeyLooksValid: !!privateKey?.includes("BEGIN PRIVATE KEY"),
+  };
+}
+
 function getAdminApp(): App {
   if (adminApp) return adminApp;
 
@@ -12,15 +38,19 @@ function getAdminApp(): App {
     return adminApp;
   }
 
-  const projectId = process.env.FIREBASE_PROJECT_ID;
-  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
-  const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n");
+  const { projectId, clientEmail, privateKey, configured } =
+    getFirebaseAdminConfig();
 
-  if (projectId && clientEmail && privateKey) {
+  if (configured && projectId && clientEmail && privateKey) {
     adminApp = initializeApp({
       credential: cert({ projectId, clientEmail, privateKey }),
     });
   } else {
+    if (process.env.NODE_ENV === "production") {
+      throw new Error(
+        "Firebase Admin is not configured. Set FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, and FIREBASE_PRIVATE_KEY in Vercel."
+      );
+    }
     adminApp = initializeApp({ projectId: projectId ?? "demo" });
   }
 

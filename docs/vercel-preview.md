@@ -36,6 +36,16 @@ https://your-preview-url.vercel.app/api/health/db
 
 Expected: `{ "ok": true, "hasAuthUsers": true, "tableCount": 12, ... }`
 
+Verify Firebase Admin (queue writes) after deploy:
+
+```
+https://your-preview-url.vercel.app/api/health/firebase
+```
+
+Expected: `{ "ok": true, "projectId": "...", "privateKeyLooksValid": true }`
+
+If `ok: false`, fix `FIREBASE_PRIVATE_KEY` in Vercel — paste the full service account key as one line with `\n` between lines.
+
 ## 3. Database setup (preview DB)
 
 ```bash
