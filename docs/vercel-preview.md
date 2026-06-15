@@ -26,6 +26,16 @@ Minimum for a working preview:
 
 Scope variables to **Preview** (and Production when ready).
 
+**Important:** Each variable must have the **Preview** checkbox enabled in Vercel (not only Production). After adding or changing variables, **Redeploy** the preview deployment — old builds do not pick up new env vars.
+
+Verify database connectivity after deploy:
+
+```
+https://your-preview-url.vercel.app/api/health/db
+```
+
+Expected: `{ "ok": true, "hasAuthUsers": true, "tableCount": 12, ... }`
+
 ## 3. Database setup (preview DB)
 
 ```bash

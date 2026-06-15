@@ -22,7 +22,24 @@ export function handleApiError(error: unknown) {
     if (error.message === "Tenant not found") {
       return jsonError("Tenant not found", 404);
     }
-    console.error("API error:", error.message);
+    if (
+      error.message === "DATABASE_URL is not configured" ||
+      error.message === "DATABASE_URL is still a placeholder"
+    ) {
+      console.error("Database config error:", error.message);
+      return jsonError(
+        "Database is not configured on this deployment. Set DATABASE_URL in Vercel (Preview scope) and redeploy.",
+        503
+      );
+    }
+    const cause = "cause" in error ? String((error as { cause?: unknown }).cause) : "";
+    console.error("API error:", error.message, cause);
+    if (error.message.startsWith("Failed query:")) {
+      return jsonError(
+        "Database error. Confirm DATABASE_URL is set for Preview in Vercel, run npm run db:push, then redeploy.",
+        503
+      );
+    }
     return jsonError(error.message, 500);
   }
   console.error("Unknown API error:", error);

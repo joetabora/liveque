@@ -6,11 +6,26 @@ type Db = NeonHttpDatabase<typeof schema>;
 
 let _db: Db | null = null;
 
+export function getDatabaseUrl(): string {
+  const raw = process.env.DATABASE_URL?.trim();
+  if (!raw) {
+    throw new Error("DATABASE_URL is not configured");
+  }
+
+  const url = raw.replace(/^["']|["']$/g, "");
+
+  if (
+    url.includes("user:password@host") ||
+    url.includes("placeholder:placeholder@localhost")
+  ) {
+    throw new Error("DATABASE_URL is still a placeholder");
+  }
+
+  return url;
+}
+
 function createDb(): Db {
-  const url =
-    process.env.DATABASE_URL ??
-    "postgresql://placeholder:placeholder@localhost:5432/placeholder";
-  const sql = neon(url);
+  const sql = neon(getDatabaseUrl());
   return drizzle(sql, { schema });
 }
 
