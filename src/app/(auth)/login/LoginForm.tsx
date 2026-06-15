@@ -1,20 +1,53 @@
 "use client";
 
-import { useState } from "react";
-import { signIn } from "next-auth/react";
+import { useState, useEffect } from "react";
+import { signIn, useSession } from "next-auth/react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { IronQueueLogo } from "@/components/IronQueueLogo";
+import { resolvePostLoginPath } from "@/lib/auth/post-login";
+
+async function fetchPostLoginDestination() {
+  const res = await fetch("/api/me", { credentials: "include" });
+  if (!res.ok) return "/onboarding";
+  const data = await res.json();
+  return resolvePostLoginPath("/", data.tenants ?? [], !!data.platformAdmin);
+}
 
 export default function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") ?? "/";
+  const callbackUrl = searchParams.get("callbackUrl");
+  const { status } = useSession();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (status !== "authenticated") return;
+
+    redirectAfterLogin();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status]);
+
+  async function redirectAfterLogin() {
+    if (
+      callbackUrl &&
+      callbackUrl !== "/" &&
+      !callbackUrl.startsWith("/login") &&
+      !callbackUrl.startsWith("/signup")
+    ) {
+      router.replace(callbackUrl);
+      router.refresh();
+      return;
+    }
+
+    const destination = await fetchPostLoginDestination();
+    router.replace(destination);
+    router.refresh();
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,8 +67,7 @@ export default function LoginForm() {
       return;
     }
 
-    router.push(callbackUrl);
-    router.refresh();
+    await redirectAfterLogin();
   };
 
   const handleMagicLink = async () => {
@@ -44,7 +76,8 @@ export default function LoginForm() {
       return;
     }
     setLoading(true);
-    await signIn("resend", { email, callbackUrl, redirect: false });
+    const destination = callbackUrl ?? "/";
+    await signIn("resend", { email, callbackUrl: destination, redirect: false });
     setLoading(false);
     router.push("/verify-email");
   };
