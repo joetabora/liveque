@@ -33,7 +33,7 @@ Critical for production:
 1. `npm run db:push` against production DATABASE_URL
 2. `npm run db:seed` — create mkehd tenant
 3. `npm run db:migrate-queue` — migrate Firestore queue data
-4. Deploy updated `firestore.rules` to Firebase
+4. Deploy updated `firestore.rules` to Firebase **only after** production runs the `develop` build (server-side queue writes). If production still runs `main` (client-side Firestore writes to `queue`), keep legacy `allow write: if true` on the flat `queue` collection until cutover.
 5. Create Firestore composite index on `tenants/{id}/queue`: status + position
 6. Configure Stripe webhook → `/api/stripe/webhook`
 7. Create MKE staff accounts before setting `SKIP_QUEUE_AUTH=false`

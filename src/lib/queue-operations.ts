@@ -12,7 +12,17 @@ async function apiFetch(slug: string, path: string, options?: RequestInit) {
 
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    throw new Error(data.error ?? `Request failed (${res.status})`);
+    const message =
+      typeof data.error === "string"
+        ? data.error
+        : `Request failed (${res.status})`;
+    console.error("Queue API error:", {
+      url: `/api/tenants/${slug}/queue${path}`,
+      status: res.status,
+      error: message,
+      body: data,
+    });
+    throw new Error(message);
   }
   return data;
 }

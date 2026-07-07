@@ -2,10 +2,11 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Legacy flat queue — read-only during migration rollback window
+    // Legacy flat queue — allow client writes until production runs the develop
+    // build (server-side Admin SDK writes). Set allow write: if false after cutover.
     match /queue/{document=**} {
       allow read: if true;
-      allow write: if false;
+      allow write: if true;
     }
 
     // Tenant-scoped queue — public read for display boards, no client writes

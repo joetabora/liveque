@@ -1,4 +1,6 @@
 import { auth } from "@/lib/auth/authjs";
+import { canSkipQueueAuth } from "@/lib/auth/queue-access";
+import { LEGACY_TENANT_SLUG } from "@/lib/constants";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
@@ -45,7 +47,10 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  if (process.env.SKIP_QUEUE_AUTH === "true" && pathname === "/admin") {
+  if (
+    canSkipQueueAuth(LEGACY_TENANT_SLUG) &&
+    (pathname === "/admin" || pathname === `/${LEGACY_TENANT_SLUG}/admin`)
+  ) {
     return NextResponse.next();
   }
 
