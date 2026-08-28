@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { db } from "@/db";
 import { tenants, displays } from "@/db/schema";
 
@@ -19,17 +19,13 @@ export async function getDisplayBySlug(tenantId: string, displaySlug: string) {
   const [display] = await db
     .select()
     .from(displays)
-    .where(eq(displays.tenantId, tenantId))
+    .where(
+      and(
+        eq(displays.tenantId, tenantId),
+        eq(displays.slug, displaySlug)
+      )
+    )
     .limit(1);
 
-  const allDisplays = await db
-    .select()
-    .from(displays)
-    .where(eq(displays.tenantId, tenantId));
-
-  return (
-    allDisplays.find((d) => d.slug === displaySlug) ??
-    allDisplays.find((d) => d.slug === "main") ??
-    null
-  );
+  return display ?? null;
 }

@@ -42,7 +42,22 @@ export const displayCreateSchema = z.object({
     .max(50)
     .regex(/^[a-z0-9-]+$/),
   name: z.string().min(1).max(100),
-  layout: z.enum(["default", "compact"]).optional(),
+  layout: z.enum(["default", "compact", "portrait"]).optional(),
+});
+
+export const promotionCreateSchema = z.object({
+  title: z.string().min(1).max(200),
+  subtitle: z.string().max(300).optional(),
+  imageUrl: z.string().url(),
+  isActive: z.boolean().optional(),
+});
+
+export const promotionUpdateSchema = z.object({
+  title: z.string().min(1).max(200).optional(),
+  subtitle: z.string().max(300).nullable().optional(),
+  imageUrl: z.string().url().optional(),
+  isActive: z.boolean().optional(),
+  sortOrder: z.number().int().min(0).optional(),
 });
 
 export const inviteMemberSchema = z.object({

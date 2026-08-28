@@ -2,6 +2,7 @@ export * from "./tenants";
 export * from "./users";
 export * from "./memberships";
 export * from "./displays";
+export * from "./promotions";
 export * from "./subscriptions";
 export * from "./audit-logs";
 export * from "./platform-admins";

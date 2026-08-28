@@ -15,6 +15,35 @@ const MKE_STAFF_EMAILS = (process.env.MKE_STAFF_EMAILS ?? "")
   .map((e) => e.trim().toLowerCase())
   .filter(Boolean);
 
+async function ensurePortraitDisplay(tenantId: string) {
+  const [existing] = await db
+    .select()
+    .from(schema.displays)
+    .where(
+      and(
+        eq(schema.displays.tenantId, tenantId),
+        eq(schema.displays.slug, "portrait")
+      )
+    )
+    .limit(1);
+
+  if (existing) {
+    console.log(`Portrait display already exists (${existing.id})`);
+    return;
+  }
+
+  await db.insert(schema.displays).values({
+    tenantId,
+    slug: "portrait",
+    name: "Portrait Kiosk",
+    publicToken: randomUUID(),
+    layout: { type: "portrait" },
+    isActive: true,
+  });
+
+  console.log(`Created portrait display for tenant ${MKEHD_SLUG}`);
+}
+
 async function ensureStaffMemberships(tenantId: string) {
   if (MKE_STAFF_EMAILS.length === 0) {
     console.log(
@@ -72,6 +101,7 @@ async function seed() {
 
   if (existing) {
     console.log(`Tenant "${MKEHD_SLUG}" already exists (${existing.id})`);
+    await ensurePortraitDisplay(existing.id);
     await ensureStaffMemberships(existing.id);
 
     if (SUPER_ADMIN_EMAIL) {
@@ -143,6 +173,8 @@ async function seed() {
     layout: { type: "default" },
     isActive: true,
   });
+
+  await ensurePortraitDisplay(tenant.id);
 
   console.log(`Created tenant "${MKEHD_SLUG}" with id ${tenant.id}`);
 
