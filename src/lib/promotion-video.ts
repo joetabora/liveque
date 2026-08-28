@@ -41,6 +41,10 @@ export function parsePromotionVideoUrl(url: string): PromotionVideoEmbed | null 
         playsinline: "1",
         loop: "1",
         playlist: videoId,
+        fs: "0",
+        iv_load_policy: "3",
+        disablekb: "1",
+        enablejsapi: "1",
       });
       return {
         provider: "youtube",
@@ -53,14 +57,37 @@ export function parsePromotionVideoUrl(url: string): PromotionVideoEmbed | null 
   const tiktokMatch = trimmed.match(TIKTOK_PATTERN);
   if (tiktokMatch?.[1]) {
     const videoId = tiktokMatch[1];
+    const params = new URLSearchParams({
+      autoplay: "1",
+      muted: "1",
+      loop: "1",
+      controls: "0",
+      description: "0",
+      music_info: "0",
+      timestamp: "0",
+      fullscreen_button: "0",
+      volume_control: "0",
+    });
     return {
       provider: "tiktok",
       videoId,
-      embedUrl: `https://www.tiktok.com/embed/v2/${videoId}`,
+      embedUrl: `https://www.tiktok.com/player/v1/${videoId}?${params.toString()}`,
     };
   }
 
   return null;
+}
+
+export function buildPromotionEmbedSrc(
+  embed: PromotionVideoEmbed,
+  origin?: string
+): string {
+  if (embed.provider === "youtube" && origin) {
+    const url = new URL(embed.embedUrl);
+    url.searchParams.set("origin", origin);
+    return url.toString();
+  }
+  return embed.embedUrl;
 }
 
 export function getPromotionPreviewImage(

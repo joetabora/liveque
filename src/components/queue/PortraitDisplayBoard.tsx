@@ -344,7 +344,7 @@ export default function PortraitDisplayBoard({
       {/* Promo carousel — bottom ~45% */}
       {hasPromotions && currentPromo && (
         <div
-          className="relative z-10 flex-[45] min-h-0 border-t border-iron-border/50 flex flex-col"
+          className="relative z-10 flex-[45] min-h-0 border-t border-iron-border/50 flex flex-col bg-black"
           onPointerDown={() => setCarouselPaused(true)}
           onPointerUp={() => setCarouselPaused(false)}
           onPointerLeave={() => setCarouselPaused(false)}
