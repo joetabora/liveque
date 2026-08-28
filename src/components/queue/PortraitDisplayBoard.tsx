@@ -7,12 +7,14 @@ import { useTenant } from "@/contexts/TenantContext";
 import { useDisplayFullscreen } from "@/hooks/useDisplayFullscreen";
 import { Clock } from "@/components/ui/Clock";
 import { DisplayFullscreenPrompt } from "@/components/queue/DisplayFullscreenPrompt";
+import { PromotionCarouselMedia } from "@/components/queue/PromotionCarouselMedia";
 
 interface Promotion {
   id: string;
   title: string;
   subtitle: string | null;
-  imageUrl: string;
+  imageUrl: string | null;
+  videoUrl: string | null;
 }
 
 interface PortraitDisplayBoardProps {
@@ -23,6 +25,7 @@ interface PortraitDisplayBoardProps {
 }
 
 const CAROUSEL_INTERVAL_MS = 8000;
+const VIDEO_CAROUSEL_INTERVAL_MS = 30000;
 const PROMO_REFETCH_MS = 30000;
 
 export default function PortraitDisplayBoard({
@@ -143,12 +146,17 @@ export default function PortraitDisplayBoard({
   useEffect(() => {
     if (promotions.length <= 1 || carouselPaused) return;
 
+    const current = promotions[carouselIndex];
+    const intervalMs = current?.videoUrl
+      ? VIDEO_CAROUSEL_INTERVAL_MS
+      : CAROUSEL_INTERVAL_MS;
+
     const interval = setInterval(() => {
       setCarouselIndex((prev) => (prev + 1) % promotions.length);
-    }, CAROUSEL_INTERVAL_MS);
+    }, intervalMs);
 
     return () => clearInterval(interval);
-  }, [promotions.length, carouselPaused]);
+  }, [promotions, carouselIndex, carouselPaused]);
 
   const { toggleFullscreen, showPrompt, dismissPrompt } = useDisplayFullscreen(
     containerRef,
@@ -350,21 +358,12 @@ export default function PortraitDisplayBoard({
               transition={{ duration: 0.5 }}
               className="flex-1 min-h-0 flex flex-col"
             >
-              <div className="relative flex-1 min-h-0 overflow-hidden">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={currentPromo.imageUrl}
-                  alt={currentPromo.title}
-                  className="absolute inset-0 w-full h-full object-cover"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-                <div className="absolute bottom-0 left-0 right-0 p-8">
-                  <h3 className="text-3xl font-black text-white">{currentPromo.title}</h3>
-                  {currentPromo.subtitle && (
-                    <p className="mt-2 text-xl text-gray-200">{currentPromo.subtitle}</p>
-                  )}
-                </div>
-              </div>
+              <PromotionCarouselMedia
+                title={currentPromo.title}
+                subtitle={currentPromo.subtitle}
+                imageUrl={currentPromo.imageUrl}
+                videoUrl={currentPromo.videoUrl}
+              />
             </motion.div>
           </AnimatePresence>
 

@@ -77,7 +77,8 @@ export async function POST(
         tenantId: tenant.id,
         title: body.title,
         subtitle: body.subtitle ?? null,
-        imageUrl: body.imageUrl,
+        imageUrl: body.imageUrl?.trim() || null,
+        videoUrl: body.videoUrl?.trim() || null,
         isActive: body.isActive ?? true,
         sortOrder,
       })

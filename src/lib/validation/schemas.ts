@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { parsePromotionVideoUrl } from "@/lib/promotion-video";
 
 export const queueItemInputSchema = z.object({
   name: z.string().min(1).max(200),
@@ -54,20 +55,62 @@ export const displayCreateSchema = z.object({
   layout: z.enum(["default", "compact", "portrait"]).optional(),
 });
 
-export const promotionCreateSchema = z.object({
-  title: z.string().min(1).max(200),
-  subtitle: z.string().max(300).optional(),
-  imageUrl: z.string().url(),
-  isActive: z.boolean().optional(),
-});
+const optionalPromotionUrl = z.union([z.string().url(), z.literal("")]).optional();
 
-export const promotionUpdateSchema = z.object({
-  title: z.string().min(1).max(200).optional(),
-  subtitle: z.string().max(300).nullable().optional(),
-  imageUrl: z.string().url().optional(),
-  isActive: z.boolean().optional(),
-  sortOrder: z.number().int().min(0).optional(),
-});
+function validatePromotionMedia(
+  data: { imageUrl?: string; videoUrl?: string },
+  ctx: z.RefinementCtx,
+  requireMedia: boolean
+) {
+  const image = data.imageUrl?.trim() ?? "";
+  const video = data.videoUrl?.trim() ?? "";
+
+  if (requireMedia && !image && !video) {
+    ctx.addIssue({
+      code: "custom",
+      message: "Provide an image URL or a YouTube/TikTok video link",
+      path: ["imageUrl"],
+    });
+  }
+
+  if (video && !parsePromotionVideoUrl(video)) {
+    ctx.addIssue({
+      code: "custom",
+      message: "Video link must be a supported YouTube or TikTok URL",
+      path: ["videoUrl"],
+    });
+  }
+}
+
+export const promotionCreateSchema = z
+  .object({
+    title: z.string().min(1).max(200),
+    subtitle: z.string().max(300).optional(),
+    imageUrl: optionalPromotionUrl,
+    videoUrl: optionalPromotionUrl,
+    isActive: z.boolean().optional(),
+  })
+  .superRefine((data, ctx) => validatePromotionMedia(data, ctx, true));
+
+export const promotionUpdateSchema = z
+  .object({
+    title: z.string().min(1).max(200).optional(),
+    subtitle: z.string().max(300).nullable().optional(),
+    imageUrl: z.union([z.string().url(), z.literal(""), z.null()]).optional(),
+    videoUrl: z.union([z.string().url(), z.literal(""), z.null()]).optional(),
+    isActive: z.boolean().optional(),
+    sortOrder: z.number().int().min(0).optional(),
+  })
+  .superRefine((data, ctx) => {
+    validatePromotionMedia(
+      {
+        imageUrl: data.imageUrl ?? undefined,
+        videoUrl: data.videoUrl ?? undefined,
+      },
+      ctx,
+      data.imageUrl !== undefined && data.videoUrl !== undefined
+    );
+  });
 
 export const inviteMemberSchema = z.object({
   email: z.string().email(),

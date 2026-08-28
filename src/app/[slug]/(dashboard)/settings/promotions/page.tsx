@@ -5,12 +5,18 @@ import { useParams } from "next/navigation";
 import { PageHeader } from "@/components/layout/AppShell";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
+import {
+  getPromotionPreviewImage,
+  parsePromotionVideoUrl,
+} from "@/lib/promotion-video";
+import { PromotionCarouselMedia } from "@/components/queue/PromotionCarouselMedia";
 
 interface Promotion {
   id: string;
   title: string;
   subtitle: string | null;
-  imageUrl: string;
+  imageUrl: string | null;
+  videoUrl: string | null;
   sortOrder: number;
   isActive: boolean;
 }
@@ -19,6 +25,7 @@ const emptyForm = {
   title: "",
   subtitle: "",
   imageUrl: "",
+  videoUrl: "",
   isActive: true,
 };
 
@@ -54,8 +61,16 @@ export default function PromotionsSettingsPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.title.trim() || !form.imageUrl.trim()) {
-      toast("Title and image URL are required", "error");
+    if (!form.title.trim()) {
+      toast("Title is required", "error");
+      return;
+    }
+    if (!form.imageUrl.trim() && !form.videoUrl.trim()) {
+      toast("Add an image URL or a YouTube/TikTok video link", "error");
+      return;
+    }
+    if (form.videoUrl.trim() && !parsePromotionVideoUrl(form.videoUrl.trim())) {
+      toast("Video link must be a supported YouTube or TikTok URL", "error");
       return;
     }
 
@@ -63,7 +78,8 @@ export default function PromotionsSettingsPage() {
     const payload = {
       title: form.title.trim(),
       subtitle: form.subtitle.trim() || undefined,
-      imageUrl: form.imageUrl.trim(),
+      imageUrl: form.imageUrl.trim() || undefined,
+      videoUrl: form.videoUrl.trim() || undefined,
       isActive: form.isActive,
     };
 
@@ -86,7 +102,8 @@ export default function PromotionsSettingsPage() {
       resetForm();
       await loadPromotions();
     } else {
-      toast("Failed to save promotion", "error");
+      const data = await res.json().catch(() => ({}));
+      toast(data.error ?? "Failed to save promotion", "error");
     }
   };
 
@@ -95,7 +112,8 @@ export default function PromotionsSettingsPage() {
     setForm({
       title: promo.title,
       subtitle: promo.subtitle ?? "",
-      imageUrl: promo.imageUrl,
+      imageUrl: promo.imageUrl ?? "",
+      videoUrl: promo.videoUrl ?? "",
       isActive: promo.isActive,
     });
   };
@@ -148,6 +166,11 @@ export default function PromotionsSettingsPage() {
     await loadPromotions();
   };
 
+  const previewImage = getPromotionPreviewImage(form.imageUrl, form.videoUrl);
+  const previewVideo = form.videoUrl.trim()
+    ? parsePromotionVideoUrl(form.videoUrl.trim())
+    : null;
+
   if (loading) {
     return <div className="animate-pulse h-64 bg-iron-panel rounded-xl" />;
   }
@@ -186,7 +209,9 @@ export default function PromotionsSettingsPage() {
           />
         </div>
         <div>
-          <label className="block text-sm text-gray-400 mb-1.5">Image URL</label>
+          <label className="block text-sm text-gray-400 mb-1.5">
+            Image URL (optional if video is set)
+          </label>
           <input
             type="url"
             value={form.imageUrl}
@@ -195,14 +220,39 @@ export default function PromotionsSettingsPage() {
             placeholder="https://example.com/promo.jpg"
           />
         </div>
-        {form.imageUrl && (
+        <div>
+          <label className="block text-sm text-gray-400 mb-1.5">
+            Video URL (optional — YouTube or TikTok)
+          </label>
+          <input
+            type="url"
+            value={form.videoUrl}
+            onChange={(e) => setForm({ ...form, videoUrl: e.target.value })}
+            className="w-full bg-iron-dark border border-iron-border rounded-xl px-4 py-2.5 text-white"
+            placeholder="https://www.youtube.com/watch?v=..."
+          />
+          <p className="mt-1.5 text-xs text-gray-500">
+            Paste a full YouTube or TikTok link. Short TikTok share links are not
+            supported — use the full tiktok.com/…/video/… URL.
+          </p>
+        </div>
+        {(previewVideo || previewImage) && (
           <div className="rounded-xl overflow-hidden border border-iron-border aspect-video max-w-sm">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={form.imageUrl}
-              alt="Preview"
-              className="w-full h-full object-cover"
-            />
+            {previewVideo ? (
+              <PromotionCarouselMedia
+                title={form.title || "Preview"}
+                subtitle={form.subtitle || null}
+                imageUrl={form.imageUrl || null}
+                videoUrl={form.videoUrl}
+              />
+            ) : (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img
+                src={previewImage!}
+                alt="Preview"
+                className="w-full h-full object-cover"
+              />
+            )}
           </div>
         )}
         <label className="flex items-center gap-2 text-sm text-gray-300">
@@ -233,77 +283,92 @@ export default function PromotionsSettingsPage() {
             No promotions yet. Add one above to show on the portrait kiosk.
           </p>
         ) : (
-          promotions.map((promo, index) => (
-            <div
-              key={promo.id}
-              className="bg-iron-panel border border-iron-border rounded-xl p-4 flex gap-4 items-start"
-            >
-              <div className="w-24 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-iron-dark">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={promo.imageUrl}
-                  alt={promo.title}
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <p className="font-semibold text-white truncate">{promo.title}</p>
-                  {!promo.isActive && (
-                    <span className="text-xs uppercase tracking-wide text-gray-500">
-                      Hidden
+          promotions.map((promo, index) => {
+            const thumb = getPromotionPreviewImage(promo.imageUrl, promo.videoUrl);
+
+            return (
+              <div
+                key={promo.id}
+                className="bg-iron-panel border border-iron-border rounded-xl p-4 flex gap-4 items-start"
+              >
+                <div className="w-24 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-iron-dark flex items-center justify-center">
+                  {thumb ? (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img
+                      src={thumb}
+                      alt={promo.title}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <span className="text-xs text-gray-500 uppercase tracking-wide">
+                      Video
                     </span>
                   )}
                 </div>
-                {promo.subtitle && (
-                  <p className="text-sm text-gray-400 mt-0.5 truncate">
-                    {promo.subtitle}
-                  </p>
-                )}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="font-semibold text-white truncate">{promo.title}</p>
+                    {promo.videoUrl && (
+                      <span className="text-xs uppercase tracking-wide text-brand-primary">
+                        Video
+                      </span>
+                    )}
+                    {!promo.isActive && (
+                      <span className="text-xs uppercase tracking-wide text-gray-500">
+                        Hidden
+                      </span>
+                    )}
+                  </div>
+                  {promo.subtitle && (
+                    <p className="text-sm text-gray-400 mt-0.5 truncate">
+                      {promo.subtitle}
+                    </p>
+                  )}
+                </div>
+                <div className="flex flex-col gap-1 flex-shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => movePromotion(promo, "up")}
+                    disabled={index === 0}
+                    className="text-xs text-gray-400 hover:text-white disabled:opacity-30"
+                  >
+                    ↑
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => movePromotion(promo, "down")}
+                    disabled={index === promotions.length - 1}
+                    className="text-xs text-gray-400 hover:text-white disabled:opacity-30"
+                  >
+                    ↓
+                  </button>
+                </div>
+                <div className="flex flex-col gap-2 flex-shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => startEdit(promo)}
+                    className="text-sm text-brand-primary hover:underline"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => toggleActive(promo)}
+                    className="text-sm text-gray-400 hover:text-white"
+                  >
+                    {promo.isActive ? "Hide" : "Show"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => deletePromotion(promo)}
+                    className="text-sm text-red-400 hover:text-red-300"
+                  >
+                    Delete
+                  </button>
+                </div>
               </div>
-              <div className="flex flex-col gap-1 flex-shrink-0">
-                <button
-                  type="button"
-                  onClick={() => movePromotion(promo, "up")}
-                  disabled={index === 0}
-                  className="text-xs text-gray-400 hover:text-white disabled:opacity-30"
-                >
-                  ↑
-                </button>
-                <button
-                  type="button"
-                  onClick={() => movePromotion(promo, "down")}
-                  disabled={index === promotions.length - 1}
-                  className="text-xs text-gray-400 hover:text-white disabled:opacity-30"
-                >
-                  ↓
-                </button>
-              </div>
-              <div className="flex flex-col gap-2 flex-shrink-0">
-                <button
-                  type="button"
-                  onClick={() => startEdit(promo)}
-                  className="text-sm text-brand-primary hover:underline"
-                >
-                  Edit
-                </button>
-                <button
-                  type="button"
-                  onClick={() => toggleActive(promo)}
-                  className="text-sm text-gray-400 hover:text-white"
-                >
-                  {promo.isActive ? "Hide" : "Show"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => deletePromotion(promo)}
-                  className="text-sm text-red-400 hover:text-red-300"
-                >
-                  Delete
-                </button>
-              </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
     </div>

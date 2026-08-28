@@ -18,7 +18,8 @@ export const promotions = pgTable(
       .references(() => tenants.id, { onDelete: "cascade" }),
     title: text("title").notNull(),
     subtitle: text("subtitle"),
-    imageUrl: text("image_url").notNull(),
+    imageUrl: text("image_url"),
+    videoUrl: text("video_url"),
     sortOrder: integer("sort_order").default(0).notNull(),
     isActive: boolean("is_active").default(true).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })

@@ -34,12 +34,23 @@ export async function PATCH(
       return handleApiError(new Error("Promotion not found"));
     }
 
+    const updates: Record<string, unknown> = {
+      ...body,
+      updatedAt: new Date(),
+    };
+
+    if (body.imageUrl !== undefined) {
+      updates.imageUrl =
+        body.imageUrl && body.imageUrl.trim() ? body.imageUrl.trim() : null;
+    }
+    if (body.videoUrl !== undefined) {
+      updates.videoUrl =
+        body.videoUrl && body.videoUrl.trim() ? body.videoUrl.trim() : null;
+    }
+
     const [updated] = await db
       .update(promotions)
-      .set({
-        ...body,
-        updatedAt: new Date(),
-      })
+      .set(updates)
       .where(eq(promotions.id, promotionId))
       .returning();
 
