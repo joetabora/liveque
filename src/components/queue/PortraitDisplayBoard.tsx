@@ -4,7 +4,9 @@ import { useEffect, useCallback, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useQueue } from "@/hooks/useQueue";
 import { useTenant } from "@/contexts/TenantContext";
+import { useDisplayFullscreen } from "@/hooks/useDisplayFullscreen";
 import { Clock } from "@/components/ui/Clock";
+import { DisplayFullscreenPrompt } from "@/components/queue/DisplayFullscreenPrompt";
 
 interface Promotion {
   id: string;
@@ -148,13 +150,10 @@ export default function PortraitDisplayBoard({
     return () => clearInterval(interval);
   }, [promotions.length, carouselPaused]);
 
-  const toggleFullscreen = useCallback(() => {
-    if (!document.fullscreenElement) {
-      containerRef.current?.requestFullscreen();
-    } else {
-      document.exitFullscreen();
-    }
-  }, []);
+  const { toggleFullscreen, showPrompt, dismissPrompt } = useDisplayFullscreen(
+    containerRef,
+    { kiosk }
+  );
 
   const headlineParts = displayHeadline.split(" ");
   const headlineFirst = headlineParts.slice(0, -1).join(" ") || displayHeadline;
@@ -183,6 +182,12 @@ export default function PortraitDisplayBoard({
         } as React.CSSProperties
       }
     >
+      <DisplayFullscreenPrompt
+        show={showPrompt}
+        onActivate={dismissPrompt}
+        brandColor={brandColor}
+      />
+
       {!connected && error && (
         <div className="absolute top-0 left-0 right-0 z-50 bg-amber-900/90 text-amber-100 text-center py-2 text-sm">
           {error}

@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect, useCallback, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useQueue } from "@/hooks/useQueue";
 import { useTenant } from "@/contexts/TenantContext";
+import { useDisplayFullscreen } from "@/hooks/useDisplayFullscreen";
 import { Clock } from "@/components/ui/Clock";
+import { DisplayFullscreenPrompt } from "@/components/queue/DisplayFullscreenPrompt";
 
 interface DisplayBoardProps {
   tenantId: string | null;
@@ -103,13 +105,10 @@ export default function DisplayBoard({
     };
   }, [needsScroll, waiting]);
 
-  const toggleFullscreen = useCallback(() => {
-    if (!document.fullscreenElement) {
-      containerRef.current?.requestFullscreen();
-    } else {
-      document.exitFullscreen();
-    }
-  }, []);
+  const { toggleFullscreen, showPrompt, dismissPrompt } = useDisplayFullscreen(
+    containerRef,
+    { kiosk }
+  );
 
   if (loading) {
     return (
@@ -129,6 +128,12 @@ export default function DisplayBoard({
       className="h-screen bg-iron-black flex flex-col relative overflow-hidden"
       style={{ "--brand-primary": brandColor, "--brand-accent": accentColor } as React.CSSProperties}
     >
+      <DisplayFullscreenPrompt
+        show={showPrompt}
+        onActivate={dismissPrompt}
+        brandColor={brandColor}
+      />
+
       {!connected && error && (
         <div className="absolute top-0 left-0 right-0 z-50 bg-amber-900/90 text-amber-100 text-center py-2 text-sm">
           {error}
