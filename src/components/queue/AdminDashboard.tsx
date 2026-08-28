@@ -35,6 +35,7 @@ interface AdminDashboardProps {
   slug: string;
   tenantId: string | null;
   displayPath?: string;
+  portraitDisplayPath?: string;
   useLegacy?: boolean;
   embedded?: boolean;
 }
@@ -43,6 +44,7 @@ export default function AdminDashboard({
   slug,
   tenantId,
   displayPath,
+  portraitDisplayPath,
   useLegacy = false,
   embedded = false,
 }: AdminDashboardProps) {
@@ -57,7 +59,28 @@ export default function AdminDashboard({
   const [editName, setEditName] = useState("");
   const [editHereToSee, setEditHereToSee] = useState("");
 
-  const displayUrl = displayPath ?? `/${slug}/display/main`;
+  const displayUrl = displayPath ?? `/${slug}/display/main?kiosk=1`;
+  const portraitDisplayUrl =
+    portraitDisplayPath ?? `/${slug}/display/portrait?kiosk=1`;
+
+  const displayLinks = (
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+      <a
+        href={displayUrl}
+        target="_blank"
+        className="text-gray-500 hover:text-brand-primary transition-colors underline underline-offset-4"
+      >
+        Landscape display →
+      </a>
+      <a
+        href={portraitDisplayUrl}
+        target="_blank"
+        className="text-gray-500 hover:text-brand-primary transition-colors underline underline-offset-4"
+      >
+        Portrait display →
+      </a>
+    </div>
+  );
 
   const startEdit = useCallback((item: QueueItem) => {
     setEditingId(item.id);
@@ -183,21 +206,16 @@ export default function AdminDashboard({
       <header className="sticky top-0 z-40 bg-iron-black/90 backdrop-blur-md border-b border-iron-border">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
           <IronQueueLogo size="sm" />
-          <div className="flex items-center gap-3">
+          <div className="flex flex-col items-end gap-2 sm:flex-row sm:items-center sm:gap-4">
             <Badge variant="orange">{waiting.length} waiting</Badge>
-            <a
-              href={displayUrl}
-              target="_blank"
-              className="text-sm text-gray-500 hover:text-brand-primary transition-colors underline underline-offset-4"
-            >
-              Open Display →
-            </a>
+            {displayLinks}
           </div>
         </div>
       </header>
       )}
 
       <main className={embedded ? "space-y-8" : "max-w-6xl mx-auto px-4 sm:px-6 py-8 space-y-8"}>
+        {embedded && displayLinks}
         <div className="flex flex-wrap gap-4">
           <Button
             size="lg"

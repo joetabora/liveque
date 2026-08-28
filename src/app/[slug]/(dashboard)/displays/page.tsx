@@ -28,9 +28,18 @@ export default function DisplaysPage() {
       .then((data) => setDisplays(data.displays ?? []));
   }, [slug]);
 
+  const hasPortrait = displays.some((d) => d.slug === "portrait");
+
   return (
     <div>
       <PageHeader title="Displays" description="Manage your TV and kiosk display URLs" />
+      {!hasPortrait && displays.length > 0 && (
+        <p className="mb-4 text-sm text-amber-400/90 bg-amber-950/30 border border-amber-900/50 rounded-xl px-4 py-3">
+          Portrait kiosk is not set up in this database yet. Run{" "}
+          <code className="text-amber-200">npm run db:seed</code> against this
+          environment&apos;s Neon URL, then refresh.
+        </p>
+      )}
       <div className="space-y-4">
         {displays.map((d) => {
           const layoutType = d.layout?.type ?? "default";

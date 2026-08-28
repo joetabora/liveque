@@ -15,12 +15,14 @@ export default function AdminPageClient({
   slug,
   tenantId,
   displayPath,
+  portraitDisplayPath,
   useLegacy,
   embedded,
 }: {
   slug: string;
   tenantId: string | null;
   displayPath?: string;
+  portraitDisplayPath?: string;
   useLegacy: boolean;
   embedded?: boolean;
 }) {
@@ -29,6 +31,7 @@ export default function AdminPageClient({
       slug={slug}
       tenantId={tenantId}
       displayPath={displayPath}
+      portraitDisplayPath={portraitDisplayPath}
       useLegacy={useLegacy}
       embedded={embedded}
     />

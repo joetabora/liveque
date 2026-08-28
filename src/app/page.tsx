@@ -37,12 +37,15 @@ export default function HomePage() {
           <p className="mt-6 text-xl text-gray-400 max-w-2xl mx-auto">
             LiveQue powers appointment display boards for dealerships, salons, clinics, and repair shops. Set up in under 10 minutes.
           </p>
-          <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center">
+          <div className="mt-10 flex flex-col sm:flex-row flex-wrap gap-4 justify-center">
             <Link href="/signup">
               <Button size="lg">Start Free Trial</Button>
             </Link>
-            <Link href="/mkehd/display/main">
-              <Button variant="secondary" size="lg">View Demo</Button>
+            <Link href="/mkehd/display/main?kiosk=1">
+              <Button variant="secondary" size="lg">Landscape Demo</Button>
+            </Link>
+            <Link href="/mkehd/display/portrait?kiosk=1">
+              <Button variant="secondary" size="lg">Portrait Demo</Button>
             </Link>
           </div>
         </motion.div>
