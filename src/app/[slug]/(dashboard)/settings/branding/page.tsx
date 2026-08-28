@@ -45,8 +45,12 @@ export default function BrandingSettingsPage() {
       body: JSON.stringify(form),
     });
     setSaving(false);
-    if (res.ok) toast("Branding saved", "success");
-    else toast("Failed to save", "error");
+    if (res.ok) {
+      toast("Branding saved", "success");
+    } else {
+      const data = await res.json().catch(() => ({}));
+      toast(data.error ?? "Failed to save", "error");
+    }
   };
 
   if (loading) return <div className="animate-pulse h-64 bg-iron-panel rounded-xl" />;

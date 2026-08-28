@@ -28,7 +28,16 @@ export const checkInSchema = z.object({
 
 export const tenantBrandingSchema = z.object({
   name: z.string().min(1).max(200).optional(),
-  logoUrl: z.string().url().or(z.literal("")).optional(),
+  logoUrl: z
+    .string()
+    .refine(
+      (val) =>
+        val === "" ||
+        val.startsWith("/") ||
+        z.string().url().safeParse(val).success,
+      { message: "Logo must be a valid URL or site path (e.g. /logo.png)" }
+    )
+    .optional(),
   brandColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
   accentColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
   welcomeMessage: z.string().max(200).optional(),
