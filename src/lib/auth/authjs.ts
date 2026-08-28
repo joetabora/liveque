@@ -16,13 +16,19 @@ import {
 import type { AuthProvider } from "./provider";
 import type { AuthSession, AuthUser } from "./provider";
 
-export const { handlers, auth, signIn, signOut } = NextAuth({
-  adapter: DrizzleAdapter(getDb(), {
+function getAuthAdapter() {
+  if (!process.env.DATABASE_URL?.trim()) return undefined;
+
+  return DrizzleAdapter(getDb(), {
     usersTable: authUsers,
     accountsTable: authAccounts,
     sessionsTable: authSessions,
     verificationTokensTable: authVerificationTokens,
-  }),
+  });
+}
+
+export const { handlers, auth, signIn, signOut } = NextAuth({
+  adapter: getAuthAdapter(),
   session: { strategy: "jwt" },
   pages: {
     signIn: "/login",

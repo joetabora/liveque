@@ -22,11 +22,19 @@ Copy `.env.local.example` to `.env.local` and fill in all values.
 
 For preview deployments on the `develop` branch, see [vercel-preview.md](vercel-preview.md).
 
-Critical for production:
-- `DATABASE_URL` — Neon connection string
-- `AUTH_SECRET` — `openssl rand -base64 32`
-- `FIREBASE_*` — client and admin credentials
-- `STRIPE_*` — secret key, webhook secret, price IDs
+Critical for production (enable the **Production** scope in Vercel for each):
+
+| Variable | Notes |
+|----------|--------|
+| `DATABASE_URL` | Neon connection string — required for auth, queue admin, promotions |
+| `AUTH_SECRET` | `openssl rand -base64 32` |
+| `AUTH_URL` | `https://liveque.vercel.app` (or your production domain) |
+| `NEXT_PUBLIC_APP_URL` | Same as `AUTH_URL` |
+| `FIREBASE_*` | Client and admin credentials |
+| `STRIPE_*` | Secret key, webhook secret, price IDs |
+| `SKIP_QUEUE_AUTH` | `true` until MKE staff memberships exist |
+
+After adding or changing variables, **Redeploy** — existing builds do not pick up new env vars.
 
 ## Post-Deploy Checklist
 
