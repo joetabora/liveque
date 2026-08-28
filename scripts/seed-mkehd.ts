@@ -4,6 +4,7 @@ import { drizzle } from "drizzle-orm/neon-http";
 import { eq, and } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import * as schema from "../src/db/schema";
+import { ensurePortraitDisplay } from "../src/lib/displays-server";
 
 const sql = neon(process.env.DATABASE_URL!);
 const db = drizzle(sql, { schema });
@@ -14,35 +15,6 @@ const MKE_STAFF_EMAILS = (process.env.MKE_STAFF_EMAILS ?? "")
   .split(",")
   .map((e) => e.trim().toLowerCase())
   .filter(Boolean);
-
-async function ensurePortraitDisplay(tenantId: string) {
-  const [existing] = await db
-    .select()
-    .from(schema.displays)
-    .where(
-      and(
-        eq(schema.displays.tenantId, tenantId),
-        eq(schema.displays.slug, "portrait")
-      )
-    )
-    .limit(1);
-
-  if (existing) {
-    console.log(`Portrait display already exists (${existing.id})`);
-    return;
-  }
-
-  await db.insert(schema.displays).values({
-    tenantId,
-    slug: "portrait",
-    name: "Portrait Kiosk",
-    publicToken: randomUUID(),
-    layout: { type: "portrait" },
-    isActive: true,
-  });
-
-  console.log(`Created portrait display for tenant ${MKEHD_SLUG}`);
-}
 
 async function ensureStaffMemberships(tenantId: string) {
   if (MKE_STAFF_EMAILS.length === 0) {
@@ -101,7 +73,8 @@ async function seed() {
 
   if (existing) {
     console.log(`Tenant "${MKEHD_SLUG}" already exists (${existing.id})`);
-    await ensurePortraitDisplay(existing.id);
+    const portrait = await ensurePortraitDisplay(existing.id);
+    console.log(`Portrait display ready (${portrait.id})`);
     await ensureStaffMemberships(existing.id);
 
     if (SUPER_ADMIN_EMAIL) {
@@ -175,6 +148,7 @@ async function seed() {
   });
 
   await ensurePortraitDisplay(tenant.id);
+  console.log(`Created portrait display for tenant ${MKEHD_SLUG}`);
 
   console.log(`Created tenant "${MKEHD_SLUG}" with id ${tenant.id}`);
 

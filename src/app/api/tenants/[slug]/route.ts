@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { tenants, displays } from "@/db/schema";
 import { handleApiError, jsonSuccess } from "@/lib/api-utils";
+import { ensurePortraitDisplay } from "@/lib/displays-server";
 
 type RouteContext = { params: Promise<{ slug: string }> };
 
@@ -21,6 +22,8 @@ export async function GET(
     if (!tenant) {
       return handleApiError(new Error("Tenant not found"));
     }
+
+    await ensurePortraitDisplay(tenant.id);
 
     const tenantDisplays = await db
       .select({

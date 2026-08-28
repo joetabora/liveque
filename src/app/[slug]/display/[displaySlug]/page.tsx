@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { getTenantBySlugServer, getDisplayBySlug } from "@/lib/tenant-server";
+import { ensurePortraitDisplay } from "@/lib/displays-server";
 import { USE_LEGACY_QUEUE } from "@/lib/constants";
 import DisplayPageClient from "@/components/queue/DisplayPageClient";
 import type { DisplayLayout } from "@/db/schema/displays";
@@ -15,6 +16,10 @@ export default async function TenantDisplayPage({
   const { kiosk } = await searchParams;
   const tenant = await getTenantBySlugServer(slug);
   if (!tenant) notFound();
+
+  if (displaySlug === "portrait") {
+    await ensurePortraitDisplay(tenant.id);
+  }
 
   const display = await getDisplayBySlug(tenant.id, displaySlug);
   if (!display || !display.isActive) notFound();
