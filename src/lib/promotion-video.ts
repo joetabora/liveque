@@ -67,11 +67,14 @@ function buildTikTokEmbed(videoId: string, loop: boolean): string {
     muted: "1",
     loop: loop ? "1" : "0",
     controls: "0",
+    progress_bar: "0",
+    play_button: "0",
+    volume_control: "0",
+    fullscreen_button: "0",
+    timestamp: "0",
     description: "0",
     music_info: "0",
-    timestamp: "0",
-    fullscreen_button: "0",
-    volume_control: "0",
+    rel: "0",
   });
   return `https://www.tiktok.com/player/v1/${videoId}?${params.toString()}`;
 }
@@ -215,7 +218,7 @@ export function getMediaPortraitFallbackMs(
     case "youtube":
       return 90_000;
     case "tiktok":
-      return 75_000;
+      return 45_000;
     case "facebook":
     case "instagram":
       return 60_000;

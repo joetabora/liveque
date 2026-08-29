@@ -74,6 +74,10 @@ export default function MediaPortraitDisplayBoard({
     playlistMeta.length > 0 &&
     playlistMeta.every((item) => item.embed.provider === "youtube");
 
+  const allTikTok =
+    playlistMeta.length > 0 &&
+    playlistMeta.every((item) => item.embed.provider === "tiktok");
+
   const youtubeIds = useMemo(
     () =>
       allYouTube ? playlistMeta.map((item) => item.embed.videoId) : [],
@@ -81,7 +85,17 @@ export default function MediaPortraitDisplayBoard({
   );
 
   const current = promotions[index] ?? null;
+  const currentProvider = current?.videoUrl
+    ? parsePromotionVideoUrl(current.videoUrl, { loop: false })?.provider
+    : null;
   const playbackKey = current ? `${current.id}-${index}` : "empty";
+
+  const playerKey =
+    currentProvider === "youtube"
+      ? "youtube-engine"
+      : currentProvider === "tiktok" || allTikTok
+        ? "tiktok-engine"
+        : playbackKey;
 
   const advance = useCallback(() => {
     setIndex((prev) => {
@@ -134,8 +148,7 @@ export default function MediaPortraitDisplayBoard({
         <div className="absolute inset-0 flex flex-col items-center justify-center px-12 text-center">
           <p className="text-2xl font-bold text-white">Media Portrait</p>
           <p className="mt-4 text-lg text-gray-400 max-w-md">
-            Add YouTube, TikTok, Facebook, or Instagram video links under Media
-            to play here.
+            Add TikTok (or YouTube) video links under Media to play here.
           </p>
         </div>
       ) : allYouTube ? (
@@ -145,14 +158,8 @@ export default function MediaPortraitDisplayBoard({
         />
       ) : current?.videoUrl ? (
         <div className="absolute inset-0">
-          {/* Keep one YouTube engine mounted across YouTube→YouTube advances */}
           <MediaPortraitPlayer
-            key={
-              parsePromotionVideoUrl(current.videoUrl, { loop: false })
-                ?.provider === "youtube"
-                ? "youtube-engine"
-                : playbackKey
-            }
+            key={playerKey}
             title={current.title}
             videoUrl={current.videoUrl}
             playbackKey={playbackKey}

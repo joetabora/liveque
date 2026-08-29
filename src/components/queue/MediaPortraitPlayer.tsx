@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   loadYouTubeIframeAPI,
   YT_CUED,
@@ -12,7 +12,6 @@ import {
   buildPromotionEmbedSrc,
   getMediaPortraitFallbackMs,
   parsePromotionVideoUrl,
-  type PromotionVideoEmbed,
 } from "@/lib/promotion-video";
 
 interface MediaPortraitPlayerProps {
@@ -20,6 +19,24 @@ interface MediaPortraitPlayerProps {
   videoUrl: string;
   playbackKey: string | number;
   onEnded: () => void;
+}
+
+function parseMessageData(data: unknown): unknown {
+  if (typeof data !== "string") return data;
+  try {
+    return JSON.parse(data);
+  } catch {
+    return data;
+  }
+}
+
+function isTikTokPlayerMessage(
+  data: unknown
+): data is { type: string; value?: unknown; "x-tiktok-player": true } {
+  const parsed = parseMessageData(data);
+  if (!parsed || typeof parsed !== "object") return false;
+  const payload = parsed as Record<string, unknown>;
+  return payload["x-tiktok-player"] === true && typeof payload.type === "string";
 }
 
 /** Stable YouTube player — swaps clips with loadVideoById (no iframe remount). */
@@ -84,7 +101,6 @@ function YouTubeEngine({
                 onEndedRef.current();
                 return;
               }
-              // Keep muted playback going if the player cues/pauses itself
               if (e.data === YT_CUED || e.data === YT_PAUSED) {
                 e.target.mute();
                 e.target.playVideo();
@@ -100,7 +116,7 @@ function YouTubeEngine({
         });
       })
       .catch(() => {
-        // Fall through — display stays black; duration fallback will advance
+        // Fall through — duration fallback will advance
       });
 
     return () => {
@@ -116,7 +132,6 @@ function YouTubeEngine({
     };
   }, []);
 
-  // Advance within the same player instance
   useEffect(() => {
     endedGateRef.current = false;
     const player = playerRef.current;
@@ -143,7 +158,6 @@ function YouTubeEngine({
     }
   }, [videoId]);
 
-  // Fallback duration advance if ended event never fires
   useEffect(() => {
     endedGateRef.current = false;
     const timer = window.setTimeout(() => {
@@ -161,45 +175,184 @@ function YouTubeEngine({
   );
 }
 
-function parseMessageData(data: unknown): unknown {
-  if (typeof data !== "string") return data;
-  try {
-    return JSON.parse(data);
-  } catch {
-    return data;
-  }
+/**
+ * TikTok player/v1 — listen for onStateChange=0 (ended) and force mute+play
+ * on each clip. See https://developers.tiktok.com/doc/embed-player
+ */
+function TikTokEngine({
+  videoId,
+  onEnded,
+}: {
+  videoId: string;
+  onEnded: () => void;
+}) {
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const endedRef = useRef(false);
+  const onEndedRef = useRef(onEnded);
+  const durationRef = useRef(0);
+  const fallbackTimerRef = useRef<number | null>(null);
+  onEndedRef.current = onEnded;
+
+  const src = useMemo(() => {
+    const params = new URLSearchParams({
+      autoplay: "1",
+      muted: "1",
+      loop: "0",
+      controls: "0",
+      progress_bar: "0",
+      play_button: "0",
+      volume_control: "0",
+      fullscreen_button: "0",
+      timestamp: "0",
+      description: "0",
+      music_info: "0",
+      rel: "0",
+    });
+    return `https://www.tiktok.com/player/v1/${videoId}?${params.toString()}`;
+  }, [videoId]);
+
+  useEffect(() => {
+    endedRef.current = false;
+    durationRef.current = 0;
+
+    const finish = () => {
+      if (endedRef.current) return;
+      endedRef.current = true;
+      if (fallbackTimerRef.current) {
+        window.clearTimeout(fallbackTimerRef.current);
+        fallbackTimerRef.current = null;
+      }
+      onEndedRef.current();
+    };
+
+    const post = (type: string, value?: unknown) => {
+      const win = iframeRef.current?.contentWindow;
+      if (!win) return;
+      win.postMessage(
+        JSON.stringify({
+          type,
+          value,
+          "x-tiktok-player": true,
+        }),
+        "*"
+      );
+    };
+
+    const kickPlay = () => {
+      post("mute");
+      post("play");
+    };
+
+    const scheduleFallback = (ms: number) => {
+      if (fallbackTimerRef.current) {
+        window.clearTimeout(fallbackTimerRef.current);
+      }
+      fallbackTimerRef.current = window.setTimeout(finish, ms);
+    };
+
+    // Default short-form fallback; refined once we know duration
+    scheduleFallback(getMediaPortraitFallbackMs("tiktok"));
+
+    const onMessage = (event: MessageEvent) => {
+      if (!event.origin.toLowerCase().includes("tiktok.com")) return;
+      if (!isTikTokPlayerMessage(event.data)) return;
+
+      const { type, value } = event.data;
+
+      if (type === "onPlayerReady") {
+        kickPlay();
+        return;
+      }
+
+      if (type === "onStateChange") {
+        const state = Number(value);
+        // -1 init, 0 ended, 1 playing, 2 paused, 3 buffering
+        if (state === 0) {
+          finish();
+          return;
+        }
+        if (state === 2) {
+          kickPlay();
+          return;
+        }
+        if (state === 1) {
+          // playing
+          return;
+        }
+        return;
+      }
+
+      if (type === "onCurrentTime") {
+        let currentTime = 0;
+        let duration = durationRef.current;
+
+        if (value && typeof value === "object") {
+          const v = value as { currentTime?: unknown; duration?: unknown };
+          currentTime = Number(v.currentTime) || 0;
+          if (Number(v.duration) > 0) {
+            duration = Number(v.duration);
+            durationRef.current = duration;
+            // End slightly after the clip; replace the coarse fallback
+            const remainingMs = Math.max(1000, (duration - currentTime + 0.4) * 1000);
+            scheduleFallback(remainingMs);
+          }
+        }
+
+        if (duration > 1 && currentTime >= duration - 0.4) {
+          finish();
+        }
+      }
+
+      if (type === "onPlayerError" || type === "onError") {
+        finish();
+      }
+    };
+
+    window.addEventListener("message", onMessage);
+
+    const kickTimer = window.setInterval(kickPlay, 500);
+    const stopKicks = window.setTimeout(() => window.clearInterval(kickTimer), 8000);
+
+    // After iframe navigates, try play even before onPlayerReady
+    const earlyKick = window.setTimeout(kickPlay, 300);
+
+    return () => {
+      window.removeEventListener("message", onMessage);
+      window.clearInterval(kickTimer);
+      window.clearTimeout(stopKicks);
+      window.clearTimeout(earlyKick);
+      if (fallbackTimerRef.current) {
+        window.clearTimeout(fallbackTimerRef.current);
+        fallbackTimerRef.current = null;
+      }
+    };
+  }, [videoId, src]);
+
+  return (
+    <div className="absolute inset-0 bg-black">
+      <iframe
+        ref={iframeRef}
+        key={src}
+        src={src}
+        title={`TikTok ${videoId}`}
+        className="h-full w-full border-0 bg-black"
+        allow="autoplay; fullscreen; encrypted-media; picture-in-picture; accelerometer; gyroscope"
+        referrerPolicy="strict-origin-when-cross-origin"
+        allowFullScreen
+      />
+    </div>
+  );
 }
 
-function isTikTokEndedPayload(data: unknown): boolean {
-  const parsed = parseMessageData(data);
-  if (typeof parsed === "string") {
-    const lower = parsed.toLowerCase();
-    return lower.includes("ended") || lower.includes("onplayerended");
-  }
-  if (!parsed || typeof parsed !== "object") return false;
-  const payload = parsed as Record<string, unknown>;
-  const type = String(payload.type ?? payload.event ?? "").toLowerCase();
-  return type.includes("ended") || type === "onplayerended";
-}
-
-function kickIframe(win: Window, embed: PromotionVideoEmbed) {
-  if (embed.provider === "tiktok") {
-    win.postMessage(
-      JSON.stringify({ type: "play", "x-tiktok-player": true }),
-      "*"
-    );
-  }
-}
-
-/** Non-YouTube embeds — remount with about:blank between clips. */
+/** Facebook / Instagram and other iframe embeds. */
 function IframeEngine({
   title,
-  embed,
+  videoUrl,
   playbackKey,
   onEnded,
 }: {
   title: string;
-  embed: PromotionVideoEmbed;
+  videoUrl: string;
   playbackKey: string | number;
   onEnded: () => void;
 }) {
@@ -209,24 +362,31 @@ function IframeEngine({
   const [src, setSrc] = useState<string>("about:blank");
   onEndedRef.current = onEnded;
 
-  const embedSrc = (() => {
+  const embed = useMemo(
+    () => parsePromotionVideoUrl(videoUrl, { loop: false }),
+    [videoUrl]
+  );
+
+  const embedSrc = useMemo(() => {
+    if (!embed) return null;
     const origin =
       typeof window !== "undefined" ? window.location.origin : undefined;
     const base = buildPromotionEmbedSrc(embed, { loop: false, origin });
     const url = new URL(base);
     url.searchParams.set("_lq", String(playbackKey));
     return url.toString();
-  })();
+  }, [embed, playbackKey]);
 
   useEffect(() => {
     endedRef.current = false;
     setSrc("about:blank");
+    if (!embedSrc) return;
     const t = window.setTimeout(() => setSrc(embedSrc), 50);
     return () => window.clearTimeout(t);
   }, [embedSrc]);
 
   useEffect(() => {
-    if (src === "about:blank") return;
+    if (!embed || src === "about:blank") return;
 
     const finish = () => {
       if (endedRef.current) return;
@@ -239,30 +399,16 @@ function IframeEngine({
       getMediaPortraitFallbackMs(embed.provider)
     );
 
-    const onMessage = (event: MessageEvent) => {
-      if (
-        embed.provider === "tiktok" &&
-        event.origin.toLowerCase().includes("tiktok.com") &&
-        isTikTokEndedPayload(event.data)
-      ) {
-        finish();
-      }
-    };
-    window.addEventListener("message", onMessage);
-
-    const kickTimer = window.setInterval(() => {
-      const win = iframeRef.current?.contentWindow;
-      if (win) kickIframe(win, embed);
-    }, 600);
-    const stopKicks = window.setTimeout(() => window.clearInterval(kickTimer), 5000);
-
-    return () => {
-      window.clearTimeout(fallbackTimer);
-      window.clearTimeout(stopKicks);
-      window.clearInterval(kickTimer);
-      window.removeEventListener("message", onMessage);
-    };
+    return () => window.clearTimeout(fallbackTimer);
   }, [src, embed, playbackKey]);
+
+  if (!embed || !embedSrc) {
+    return (
+      <div className="absolute inset-0 flex items-center justify-center bg-black text-gray-500">
+        Unsupported video link
+      </div>
+    );
+  }
 
   return (
     <div className="absolute inset-0 bg-black">
@@ -353,10 +499,14 @@ export function MediaPortraitPlayer({
     return <YouTubeEngine videoId={embed.videoId} onEnded={onEnded} />;
   }
 
+  if (embed.provider === "tiktok") {
+    return <TikTokEngine videoId={embed.videoId} onEnded={onEnded} />;
+  }
+
   return (
     <IframeEngine
       title={title}
-      embed={embed}
+      videoUrl={videoUrl}
       playbackKey={playbackKey}
       onEnded={onEnded}
     />
