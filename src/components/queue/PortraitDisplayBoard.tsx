@@ -306,11 +306,8 @@ export default function PortraitDisplayBoard({
               ) : (
                 <div className="grid gap-2">
                   {waiting.map((item) => (
-                    <motion.div
+                    <div
                       key={item.id}
-                      layout
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
                       className="flex items-center px-6 py-4 rounded-2xl bg-iron-panel/80 border border-iron-border/30"
                     >
                       <span
@@ -319,12 +316,12 @@ export default function PortraitDisplayBoard({
                       >
                         ★
                       </span>
-                      <div className="min-w-0">
-                        <h3 className="text-2xl font-black text-white truncate">
-                          {item.name}
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-2xl font-black text-white break-words">
+                          {item.name || "—"}
                         </h3>
                         {item.hereToSee && (
-                          <p className="mt-0.5 text-base text-gray-400 truncate">
+                          <p className="mt-0.5 text-base text-gray-400 break-words">
                             Here to see{" "}
                             <span className="text-gray-200 font-semibold">
                               {item.hereToSee}
@@ -332,7 +329,7 @@ export default function PortraitDisplayBoard({
                           </p>
                         )}
                       </div>
-                    </motion.div>
+                    </div>
                   ))}
                 </div>
               )}

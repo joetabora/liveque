@@ -25,10 +25,11 @@ export function AppShell({
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    // Document-level scroll (not nested overflow) — required for touch kiosk browsers
-    <div className="min-h-screen bg-iron-black lg:flex">
+    // Document-level scroll only — nested overflow breaks touch kiosk browsers
+    <div className="min-h-screen bg-iron-black">
+      <div className="lg:flex lg:items-start">
       <aside
-        className={`fixed lg:sticky lg:top-0 lg:h-screen lg:overflow-y-auto inset-y-0 left-0 z-50 w-64 bg-iron-panel border-r border-iron-border transform transition-transform lg:translate-x-0 ${
+        className={`fixed lg:static lg:sticky lg:top-0 lg:self-start inset-y-0 left-0 z-50 w-64 bg-iron-panel border-r border-iron-border transform transition-transform lg:translate-x-0 ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
@@ -77,6 +78,7 @@ export function AppShell({
           <span className="font-semibold truncate">{tenantName}</span>
         </header>
         <main>{children}</main>
+      </div>
       </div>
     </div>
   );

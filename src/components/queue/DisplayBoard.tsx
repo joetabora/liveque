@@ -225,23 +225,20 @@ export default function DisplayBoard({
               ) : (
                 <div className="grid gap-3">
                   {waiting.map((item, index) => (
-                    <motion.div
+                    <div
                       key={item.id}
-                      layout
-                      initial={{ opacity: 0, x: 20 }}
-                      animate={{ opacity: 1, x: 0 }}
                       className="flex items-center px-8 py-5 rounded-2xl bg-iron-panel/80 border border-iron-border/30"
                     >
                       <span className="text-xl flex-shrink-0 mr-4" style={{ color: brandColor }}>★</span>
-                      <div className="min-w-0">
-                        <h3 className="text-3xl md:text-4xl font-black text-white truncate">{item.name}</h3>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-3xl md:text-4xl font-black text-white break-words">{item.name || "—"}</h3>
                         {item.hereToSee && (
-                          <p className="mt-1 text-lg text-gray-400 truncate">
+                          <p className="mt-1 text-lg text-gray-400 break-words">
                             Here to see <span className="text-gray-200 font-semibold">{item.hereToSee}</span>
                           </p>
                         )}
                       </div>
-                    </motion.div>
+                    </div>
                   ))}
                 </div>
               )}

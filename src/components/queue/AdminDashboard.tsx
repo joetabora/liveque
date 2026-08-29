@@ -436,20 +436,62 @@ export default function AdminDashboard({
                                     </div>
                                   </form>
                                 ) : (
-                                  <div className="flex items-center gap-4">
-                                    <div {...provided.dragHandleProps} className="text-gray-600 hover:text-gray-400 cursor-grab active:cursor-grabbing p-1">⋮⋮</div>
-                                    <span className="text-lg font-black text-gray-600 w-8 text-center">{index + 1}</span>
-                                    <div className="flex-1 min-w-0">
-                                      <h3 className="text-lg font-bold text-white truncate">{item.name}</h3>
-                                      {item.hereToSee && (
-                                        <p className="text-sm text-gray-500 truncate">Here to see <span className="text-gray-300">{item.hereToSee}</span></p>
-                                      )}
+                                  <div>
+                                    <div className="flex items-start gap-3">
+                                      <div
+                                        {...provided.dragHandleProps}
+                                        className="text-gray-600 hover:text-gray-400 cursor-grab active:cursor-grabbing p-1 flex-shrink-0"
+                                      >
+                                        ⋮⋮
+                                      </div>
+                                      <span className="text-lg font-black text-gray-600 w-8 text-center flex-shrink-0">
+                                        {index + 1}
+                                      </span>
+                                      <div className="flex-1 min-w-0">
+                                        <h3 className="text-lg font-bold text-white break-words">
+                                          {item.name || "—"}
+                                        </h3>
+                                        {item.hereToSee && (
+                                          <p className="text-sm text-gray-500 break-words mt-0.5">
+                                            Here to see{" "}
+                                            <span className="text-gray-300">{item.hereToSee}</span>
+                                          </p>
+                                        )}
+                                      </div>
                                     </div>
-                                    <div className="flex items-center gap-2 flex-shrink-0 flex-wrap justify-end">
-                                      <Button variant="ghost" size="sm" onClick={() => startEdit(item)}>Edit</Button>
-                                      <Button size="sm" onClick={() => handleAction(item.id, () => startService(slug, item.id))} loading={actionLoading === item.id}>Serve</Button>
-                                      <Button variant="ghost" size="sm" onClick={() => handleAction(`skip-${item.id}`, () => skipItem(slug, item.id))} loading={actionLoading === `skip-${item.id}`}>Skip</Button>
-                                      <Button variant="danger" size="sm" onClick={() => handleAction(`rm-${item.id}`, () => removeItem(slug, item.id))} loading={actionLoading === `rm-${item.id}`}>✕</Button>
+                                    <div className="flex flex-wrap items-center gap-2 mt-3 pl-14">
+                                      <Button variant="ghost" size="sm" onClick={() => startEdit(item)}>
+                                        Edit
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        onClick={() =>
+                                          handleAction(item.id, () => startService(slug, item.id))
+                                        }
+                                        loading={actionLoading === item.id}
+                                      >
+                                        Serve
+                                      </Button>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() =>
+                                          handleAction(`skip-${item.id}`, () => skipItem(slug, item.id))
+                                        }
+                                        loading={actionLoading === `skip-${item.id}`}
+                                      >
+                                        Skip
+                                      </Button>
+                                      <Button
+                                        variant="danger"
+                                        size="sm"
+                                        onClick={() =>
+                                          handleAction(`rm-${item.id}`, () => removeItem(slug, item.id))
+                                        }
+                                        loading={actionLoading === `rm-${item.id}`}
+                                      >
+                                        ✕
+                                      </Button>
                                     </div>
                                   </div>
                                 )}

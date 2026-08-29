@@ -240,6 +240,12 @@ export default function MediaSettingsClient({
           </Button>
         </div>
 
+        {mediaItems.length > 1 && (
+          <p className="text-sm text-amber-300/90">
+            Swipe up on this screen to scroll — all {mediaItems.length} videos are listed below.
+          </p>
+        )}
+
         {mediaItems.length === 0 ? (
           <p className="text-gray-500 text-sm">
             No videos yet. Add a TikTok link below.
@@ -254,28 +260,29 @@ export default function MediaSettingsClient({
             return (
               <div
                 key={item.id}
-                className="bg-iron-panel border border-iron-border rounded-xl p-4 flex gap-4 items-start"
+                className="bg-iron-panel border border-iron-border rounded-xl p-4 flex flex-col gap-3 sm:flex-row sm:gap-4 sm:items-start"
               >
-                <div className="w-8 flex-shrink-0 text-gray-500 font-bold text-lg pt-1">
-                  {index + 1}
-                </div>
-                <div className="w-16 h-28 rounded-lg overflow-hidden flex-shrink-0 bg-black flex items-center justify-center">
-                  {thumb ? (
-                    /* eslint-disable-next-line @next/next/no-img-element */
-                    <img
-                      src={thumb}
-                      alt={item.title}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <span className="text-[10px] text-gray-500 uppercase tracking-wide px-1 text-center">
-                      {provider ?? "Video"}
-                    </span>
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <p className="font-semibold text-white truncate">{item.title}</p>
+                <div className="flex items-start gap-3 sm:contents">
+                  <div className="w-8 flex-shrink-0 text-gray-500 font-bold text-lg pt-1">
+                    {index + 1}
+                  </div>
+                  <div className="w-16 h-28 rounded-lg overflow-hidden flex-shrink-0 bg-black flex items-center justify-center">
+                    {thumb ? (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img
+                        src={thumb}
+                        alt={item.title}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <span className="text-[10px] text-gray-500 uppercase tracking-wide px-1 text-center">
+                        {provider ?? "Video"}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="font-semibold text-white break-words">{item.title}</p>
                     {provider && (
                       <span className="text-xs uppercase tracking-wide text-brand-primary">
                         {provider}
@@ -296,46 +303,49 @@ export default function MediaSettingsClient({
                     {item.videoUrl}
                   </p>
                 </div>
-                <div className="flex flex-col gap-1 flex-shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => moveItem(item, "up")}
-                    disabled={index === 0}
-                    className="text-xs text-gray-400 hover:text-white disabled:opacity-30 p-2"
-                  >
-                    ↑
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => moveItem(item, "down")}
-                    disabled={index === mediaItems.length - 1}
-                    className="text-xs text-gray-400 hover:text-white disabled:opacity-30 p-2"
-                  >
-                    ↓
-                  </button>
                 </div>
-                <div className="flex flex-col gap-2 flex-shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => startEdit(item)}
-                    className="text-sm text-brand-primary hover:underline p-1"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => toggleActive(item)}
-                    className="text-sm text-gray-400 hover:text-white p-1"
-                  >
-                    {item.isActive ? "Hide" : "Show"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => deleteItem(item)}
-                    className="text-sm text-red-400 hover:text-red-300 p-1"
-                  >
-                    Delete
-                  </button>
+                <div className="flex flex-row sm:flex-col gap-3 sm:gap-1 flex-shrink-0 pl-11 sm:pl-0">
+                  <div className="flex gap-1">
+                    <button
+                      type="button"
+                      onClick={() => moveItem(item, "up")}
+                      disabled={index === 0}
+                      className="text-xs text-gray-400 hover:text-white disabled:opacity-30 p-2"
+                    >
+                      ↑
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => moveItem(item, "down")}
+                      disabled={index === mediaItems.length - 1}
+                      className="text-xs text-gray-400 hover:text-white disabled:opacity-30 p-2"
+                    >
+                      ↓
+                    </button>
+                  </div>
+                  <div className="flex flex-wrap gap-x-3 gap-y-1">
+                    <button
+                      type="button"
+                      onClick={() => startEdit(item)}
+                      className="text-sm text-brand-primary hover:underline p-1"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => toggleActive(item)}
+                      className="text-sm text-gray-400 hover:text-white p-1"
+                    >
+                      {item.isActive ? "Hide" : "Show"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => deleteItem(item)}
+                      className="text-sm text-red-400 hover:text-red-300 p-1"
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </div>
               </div>
             );

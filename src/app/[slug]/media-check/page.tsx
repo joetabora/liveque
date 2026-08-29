@@ -1,6 +1,8 @@
 import { notFound } from "next/navigation";
 import { getMediaPortraitPlaylist } from "@/lib/media-playlist-server";
 import { getTenantBySlugServer } from "@/lib/tenant-server";
+import { USE_LEGACY_QUEUE } from "@/lib/constants";
+import QueueCheckClient from "./QueueCheckClient";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -48,10 +50,12 @@ export default async function MediaCheckPage({
         </ol>
       )}
       <p className="mt-10 text-sm text-gray-500 max-w-xl">
-        If this page shows all videos but Settings → Media does not, scroll may be
-        broken on that browser. If this page also shows one/zero, this device is
-        not loading production data — check the URL host.
+        If this page shows all videos but Settings → Media does not, scroll down
+        on that page (touch screens often need a swipe). If this page also shows
+        one/zero, this device is not loading production data — check the URL
+        host.
       </p>
+      <QueueCheckClient tenantId={tenant.id} useLegacy={USE_LEGACY_QUEUE} />
       <p className="mt-4 text-sm space-x-4">
         <a
           href={`/${slug}/settings/media`}

@@ -22,6 +22,7 @@ function isPublicPath(pathname: string) {
   }
   if (pathname.includes("/display/")) return true;
   if (pathname === "/display") return true;
+  if (pathname.endsWith("/media-check")) return true;
   if (pathname.endsWith("/checkin")) return true;
   return false;
 }
