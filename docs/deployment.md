@@ -29,6 +29,7 @@ Critical for production (enable the **Production** scope in Vercel for each):
 | `DATABASE_URL` | Neon connection string — required for auth, queue admin, promotions |
 | `AUTH_SECRET` | `openssl rand -base64 32` |
 | `AUTH_URL` | `https://liveque.vercel.app` (or your production domain) |
+| `AUTH_TRUST_HOST` | `true` (required on Vercel) |
 | `NEXT_PUBLIC_APP_URL` | Same as `AUTH_URL` |
 | `FIREBASE_*` | Client and admin credentials |
 | `STRIPE_*` | Secret key, webhook secret, price IDs |

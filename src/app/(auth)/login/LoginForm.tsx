@@ -1,50 +1,68 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { signIn, useSession } from "next-auth/react";
+import { getSession, signIn, useSession } from "next-auth/react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { IronQueueLogo } from "@/components/IronQueueLogo";
 import { resolvePostLoginPath } from "@/lib/auth/post-login";
 
-async function fetchPostLoginDestination() {
+async function fetchPostLoginDestination(callbackUrl: string | null) {
+  if (
+    callbackUrl &&
+    callbackUrl !== "/" &&
+    !callbackUrl.startsWith("/login") &&
+    !callbackUrl.startsWith("/signup")
+  ) {
+    return callbackUrl;
+  }
+
   const res = await fetch("/api/me", { credentials: "include" });
-  if (!res.ok) return "/onboarding";
+  if (!res.ok) {
+    // Authenticated but /api/me failed — still send somewhere useful
+    return "/onboarding";
+  }
   const data = await res.json();
   return resolvePostLoginPath("/", data.tenants ?? [], !!data.platformAdmin);
+}
+
+function authErrorMessage(code: string | null | undefined): string {
+  switch (code) {
+    case "CredentialsSignin":
+      return "Invalid email or password";
+    case "Configuration":
+      return "Sign-in is misconfigured on this deployment. Check AUTH_SECRET and AUTH_URL in Vercel.";
+    case "AccessDenied":
+      return "Access denied";
+    case "SessionRequired":
+      return "Please sign in to continue";
+    default:
+      return code ? `Sign-in failed (${code})` : "Sign-in failed. Please try again.";
+  }
 }
 
 export default function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl");
+  const urlError = searchParams.get("error");
   const { status } = useSession();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState(() =>
+    urlError ? authErrorMessage(urlError) : ""
+  );
 
   useEffect(() => {
     if (status !== "authenticated") return;
-
-    redirectAfterLogin();
+    void redirectAfterLogin();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status]);
 
   async function redirectAfterLogin() {
-    if (
-      callbackUrl &&
-      callbackUrl !== "/" &&
-      !callbackUrl.startsWith("/login") &&
-      !callbackUrl.startsWith("/signup")
-    ) {
-      router.replace(callbackUrl);
-      router.refresh();
-      return;
-    }
-
-    const destination = await fetchPostLoginDestination();
+    const destination = await fetchPostLoginDestination(callbackUrl);
     router.replace(destination);
     router.refresh();
   }
@@ -54,20 +72,34 @@ export default function LoginForm() {
     setLoading(true);
     setError("");
 
-    const result = await signIn("credentials", {
-      email,
-      password,
-      redirect: false,
-    });
+    try {
+      const result = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+      });
 
-    setLoading(false);
+      if (result?.error || result?.ok === false) {
+        setError(authErrorMessage(result.error));
+        return;
+      }
 
-    if (result?.error) {
-      setError("Invalid email or password");
-      return;
+      // Confirm the session cookie actually stuck before navigating.
+      // Otherwise middleware bounces protected routes back to /login (looks like a refresh).
+      const session = await getSession();
+      if (!session?.user) {
+        setError(
+          "Signed in, but no session was created. Set AUTH_SECRET (and AUTH_URL) for Production in Vercel, then redeploy."
+        );
+        return;
+      }
+
+      await redirectAfterLogin();
+    } catch {
+      setError("Sign-in failed. Please try again.");
+    } finally {
+      setLoading(false);
     }
-
-    await redirectAfterLogin();
   };
 
   const handleMagicLink = async () => {

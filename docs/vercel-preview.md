@@ -20,6 +20,7 @@ Minimum for a working preview:
 | `AUTH_SECRET` | `openssl rand -base64 32` |
 | `NEXT_PUBLIC_APP_URL` | Your Vercel preview URL (e.g. `https://liveque-xxx.vercel.app`) |
 | `AUTH_URL` | Same as `NEXT_PUBLIC_APP_URL` |
+| `AUTH_TRUST_HOST` | `true` |
 | Firebase client + admin vars | Same `mkehdlive` project credentials |
 | `SKIP_QUEUE_AUTH` | `true` until staff accounts exist |
 | Stripe vars | Test mode keys for preview |

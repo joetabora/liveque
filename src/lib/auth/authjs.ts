@@ -28,6 +28,8 @@ function getAuthAdapter() {
 }
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  trustHost: true,
+  secret: process.env.AUTH_SECRET,
   adapter: getAuthAdapter(),
   session: { strategy: "jwt" },
   pages: {
