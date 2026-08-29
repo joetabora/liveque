@@ -4,9 +4,13 @@ import {
   ensureMediaPortraitDisplay,
   ensurePortraitDisplay,
 } from "@/lib/displays-server";
+import { getMediaPortraitPlaylist } from "@/lib/media-playlist-server";
 import { USE_LEGACY_QUEUE } from "@/lib/constants";
 import DisplayPageClient from "@/components/queue/DisplayPageClient";
 import type { DisplayLayout } from "@/db/schema/displays";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export default async function TenantDisplayPage({
   params,
@@ -30,6 +34,10 @@ export default async function TenantDisplayPage({
   if (!display || !display.isActive) notFound();
 
   const layoutType: DisplayLayout["type"] = display.layout?.type ?? "default";
+  const initialMediaPlaylist =
+    layoutType === "media-portrait"
+      ? await getMediaPortraitPlaylist(slug)
+      : [];
 
   return (
     <DisplayPageClient
@@ -38,6 +46,7 @@ export default async function TenantDisplayPage({
       useLegacy={USE_LEGACY_QUEUE}
       kiosk={kiosk === "1"}
       layoutType={layoutType}
+      initialMediaPlaylist={initialMediaPlaylist}
     />
   );
 }

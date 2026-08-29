@@ -1,10 +1,10 @@
-import { asc, eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
-import { db } from "@/db";
-import { promotions, tenants } from "@/db/schema";
-import MediaSettingsClient, {
-  type MediaItem,
-} from "./MediaSettingsClient";
+import { getTenantBySlugServer } from "@/lib/tenant-server";
+import { getMediaAdminItems } from "@/lib/media-playlist-server";
+import MediaSettingsClient from "./MediaSettingsClient";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export default async function MediaSettingsPage({
   params,
@@ -12,30 +12,10 @@ export default async function MediaSettingsPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-
-  const [tenant] = await db
-    .select()
-    .from(tenants)
-    .where(eq(tenants.slug, slug))
-    .limit(1);
-
+  const tenant = await getTenantBySlugServer(slug);
   if (!tenant) notFound();
 
-  const rows = await db
-    .select()
-    .from(promotions)
-    .where(eq(promotions.tenantId, tenant.id))
-    .orderBy(asc(promotions.sortOrder), asc(promotions.createdAt));
-
-  const initialItems: MediaItem[] = rows.map((row) => ({
-    id: row.id,
-    title: row.title,
-    subtitle: row.subtitle,
-    imageUrl: row.imageUrl,
-    videoUrl: row.videoUrl,
-    sortOrder: row.sortOrder,
-    isActive: row.isActive,
-  }));
+  const initialItems = await getMediaAdminItems(slug);
 
   return <MediaSettingsClient slug={slug} initialItems={initialItems} />;
 }

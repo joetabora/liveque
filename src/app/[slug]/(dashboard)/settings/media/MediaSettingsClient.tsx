@@ -10,16 +10,9 @@ import {
   parsePromotionVideoUrl,
 } from "@/lib/promotion-video";
 import { PromotionCarouselMedia } from "@/components/queue/PromotionCarouselMedia";
+import type { MediaAdminItem } from "@/lib/media-playlist-types";
 
-export interface MediaItem {
-  id: string;
-  title: string;
-  subtitle: string | null;
-  imageUrl: string | null;
-  videoUrl: string | null;
-  sortOrder: number;
-  isActive: boolean;
-}
+export type MediaItem = MediaAdminItem;
 
 const emptyForm = {
   title: "",
@@ -38,23 +31,19 @@ export default function MediaSettingsClient({
   const router = useRouter();
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
-  const [items, setItems] = useState(initialItems);
   const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [host, setHost] = useState("");
 
-  useEffect(() => {
-    setItems(initialItems);
-  }, [initialItems]);
+  // Always render from server props — avoids client state drifting on kiosk browsers
+  const mediaItems = useMemo(
+    () => initialItems.filter((item) => !!item.videoUrl?.trim()),
+    [initialItems]
+  );
 
   useEffect(() => {
     setHost(window.location.host);
   }, []);
-
-  const mediaItems = useMemo(
-    () => items.filter((item) => !!item.videoUrl?.trim()),
-    [items]
-  );
 
   const refresh = () => {
     router.refresh();
@@ -113,7 +102,11 @@ export default function MediaSettingsClient({
       refresh();
     } else {
       const data = await res.json().catch(() => ({}));
-      toast(data.error ?? "Failed to save media", "error");
+      toast(
+        data.error ??
+          "Failed to save media — sign in as staff on this device to edit",
+        "error"
+      );
     }
   };
 
@@ -138,7 +131,10 @@ export default function MediaSettingsClient({
     if (res.ok) {
       refresh();
     } else {
-      toast("Failed to update media — sign in as staff to change the playlist", "error");
+      toast(
+        "Failed to update — sign in as staff on this device to edit the playlist",
+        "error"
+      );
     }
   };
 
@@ -155,7 +151,10 @@ export default function MediaSettingsClient({
       if (editingId === item.id) resetForm();
       refresh();
     } else {
-      toast("Failed to delete media — sign in as staff to change the playlist", "error");
+      toast(
+        "Failed to delete — sign in as staff on this device to edit the playlist",
+        "error"
+      );
     }
   };
 
@@ -182,133 +181,16 @@ export default function MediaSettingsClient({
     if (results.every((r) => r.ok)) {
       refresh();
     } else {
-      toast("Failed to reorder — sign in as staff to change the playlist", "error");
+      toast(
+        "Failed to reorder — sign in as staff on this device to edit the playlist",
+        "error"
+      );
     }
   };
 
   const previewVideo = form.videoUrl.trim()
     ? parsePromotionVideoUrl(form.videoUrl.trim())
     : null;
-
-  const playlistSection = (
-    <div className="space-y-3 mb-10">
-      <div className="flex flex-wrap items-end justify-between gap-2">
-        <div>
-          <h2 className="text-lg font-semibold text-white">
-            Playlist{mediaItems.length > 0 ? ` (${mediaItems.length})` : ""}
-          </h2>
-          {host && (
-            <p className="text-xs text-gray-600 mt-1">
-              Loaded from <span className="text-gray-400">{host}</span>
-            </p>
-          )}
-        </div>
-        <Button type="button" variant="ghost" onClick={refresh}>
-          Refresh
-        </Button>
-      </div>
-
-      {mediaItems.length === 0 ? (
-        <p className="text-gray-500 text-sm">
-          No videos yet. Add a TikTok link below to start the Media Portrait
-          playlist.
-        </p>
-      ) : (
-        mediaItems.map((item, index) => {
-          const thumb = getPromotionPreviewImage(item.imageUrl, item.videoUrl);
-          const provider = item.videoUrl
-            ? parsePromotionVideoUrl(item.videoUrl)?.provider
-            : null;
-
-          return (
-            <div
-              key={item.id}
-              className="bg-iron-panel border border-iron-border rounded-xl p-4 flex gap-4 items-start"
-            >
-              <div className="w-16 h-28 rounded-lg overflow-hidden flex-shrink-0 bg-black flex items-center justify-center">
-                {thumb ? (
-                  /* eslint-disable-next-line @next/next/no-img-element */
-                  <img
-                    src={thumb}
-                    alt={item.title}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <span className="text-[10px] text-gray-500 uppercase tracking-wide px-1 text-center">
-                    {provider ?? "Video"}
-                  </span>
-                )}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <p className="font-semibold text-white truncate">{item.title}</p>
-                  {provider && (
-                    <span className="text-xs uppercase tracking-wide text-brand-primary">
-                      {provider}
-                    </span>
-                  )}
-                  {!item.isActive && (
-                    <span className="text-xs uppercase tracking-wide text-gray-500">
-                      Hidden
-                    </span>
-                  )}
-                </div>
-                {item.subtitle && (
-                  <p className="text-sm text-gray-400 mt-0.5 truncate">
-                    {item.subtitle}
-                  </p>
-                )}
-                <p className="text-xs text-gray-600 mt-1 truncate">
-                  {item.videoUrl}
-                </p>
-              </div>
-              <div className="flex flex-col gap-1 flex-shrink-0">
-                <button
-                  type="button"
-                  onClick={() => moveItem(item, "up")}
-                  disabled={index === 0}
-                  className="text-xs text-gray-400 hover:text-white disabled:opacity-30"
-                >
-                  ↑
-                </button>
-                <button
-                  type="button"
-                  onClick={() => moveItem(item, "down")}
-                  disabled={index === mediaItems.length - 1}
-                  className="text-xs text-gray-400 hover:text-white disabled:opacity-30"
-                >
-                  ↓
-                </button>
-              </div>
-              <div className="flex flex-col gap-2 flex-shrink-0">
-                <button
-                  type="button"
-                  onClick={() => startEdit(item)}
-                  className="text-sm text-brand-primary hover:underline"
-                >
-                  Edit
-                </button>
-                <button
-                  type="button"
-                  onClick={() => toggleActive(item)}
-                  className="text-sm text-gray-400 hover:text-white"
-                >
-                  {item.isActive ? "Hide" : "Show"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => deleteItem(item)}
-                  className="text-sm text-red-400 hover:text-red-300"
-                >
-                  Delete
-                </button>
-              </div>
-            </div>
-          );
-        })
-      )}
-    </div>
-  );
 
   return (
     <div>
@@ -327,8 +209,139 @@ export default function MediaSettingsClient({
         }
       />
 
-      {/* Playlist first so it is visible on tall touch screens without scrolling past the form */}
-      {playlistSection}
+      <div className="mb-4 rounded-xl border border-brand-primary/30 bg-brand-primary/10 px-4 py-3">
+        <p className="text-lg font-bold text-white">
+          {mediaItems.length} video{mediaItems.length === 1 ? "" : "s"} in
+          playlist
+        </p>
+        <p className="text-sm text-gray-300 mt-1">
+          {mediaItems.length > 0
+            ? mediaItems.map((item) => item.title).join(" · ")
+            : "No TikTok/YouTube links saved yet."}
+        </p>
+        {host && (
+          <p className="text-xs text-gray-500 mt-2">
+            Site: <span className="text-gray-300">{host}</span>
+            {host !== "liveque.vercel.app" && (
+              <span className="text-amber-400">
+                {" "}
+                — use liveque.vercel.app on the kiosk for production data
+              </span>
+            )}
+          </p>
+        )}
+      </div>
+
+      <div className="space-y-3 mb-10">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-lg font-semibold text-white">Playlist</h2>
+          <Button type="button" variant="ghost" onClick={refresh}>
+            Refresh
+          </Button>
+        </div>
+
+        {mediaItems.length === 0 ? (
+          <p className="text-gray-500 text-sm">
+            No videos yet. Add a TikTok link below.
+          </p>
+        ) : (
+          mediaItems.map((item, index) => {
+            const thumb = getPromotionPreviewImage(item.imageUrl, item.videoUrl);
+            const provider = item.videoUrl
+              ? parsePromotionVideoUrl(item.videoUrl)?.provider
+              : null;
+
+            return (
+              <div
+                key={item.id}
+                className="bg-iron-panel border border-iron-border rounded-xl p-4 flex gap-4 items-start"
+              >
+                <div className="w-8 flex-shrink-0 text-gray-500 font-bold text-lg pt-1">
+                  {index + 1}
+                </div>
+                <div className="w-16 h-28 rounded-lg overflow-hidden flex-shrink-0 bg-black flex items-center justify-center">
+                  {thumb ? (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img
+                      src={thumb}
+                      alt={item.title}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <span className="text-[10px] text-gray-500 uppercase tracking-wide px-1 text-center">
+                      {provider ?? "Video"}
+                    </span>
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="font-semibold text-white truncate">{item.title}</p>
+                    {provider && (
+                      <span className="text-xs uppercase tracking-wide text-brand-primary">
+                        {provider}
+                      </span>
+                    )}
+                    {!item.isActive && (
+                      <span className="text-xs uppercase tracking-wide text-gray-500">
+                        Hidden
+                      </span>
+                    )}
+                  </div>
+                  {item.subtitle && (
+                    <p className="text-sm text-gray-400 mt-0.5 truncate">
+                      {item.subtitle}
+                    </p>
+                  )}
+                  <p className="text-xs text-gray-600 mt-1 break-all">
+                    {item.videoUrl}
+                  </p>
+                </div>
+                <div className="flex flex-col gap-1 flex-shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => moveItem(item, "up")}
+                    disabled={index === 0}
+                    className="text-xs text-gray-400 hover:text-white disabled:opacity-30 p-2"
+                  >
+                    ↑
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => moveItem(item, "down")}
+                    disabled={index === mediaItems.length - 1}
+                    className="text-xs text-gray-400 hover:text-white disabled:opacity-30 p-2"
+                  >
+                    ↓
+                  </button>
+                </div>
+                <div className="flex flex-col gap-2 flex-shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => startEdit(item)}
+                    className="text-sm text-brand-primary hover:underline p-1"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => toggleActive(item)}
+                    className="text-sm text-gray-400 hover:text-white p-1"
+                  >
+                    {item.isActive ? "Hide" : "Show"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => deleteItem(item)}
+                    className="text-sm text-red-400 hover:text-red-300 p-1"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
 
       <form onSubmit={handleSubmit} className="max-w-xl space-y-4">
         <h2 className="text-lg font-semibold text-white">

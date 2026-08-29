@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import { TenantProvider } from "@/contexts/TenantContext";
 import type { DisplayLayout } from "@/db/schema/displays";
+import type { MediaPlaylistItem } from "@/lib/media-playlist-types";
 
 const loadingSpinner = (
   <div className="min-h-screen flex items-center justify-center bg-iron-black">
@@ -37,17 +38,23 @@ export default function DisplayPageClient({
   useLegacy,
   kiosk,
   layoutType = "default",
+  initialMediaPlaylist = [],
 }: {
   slug: string;
   tenantId: string | null;
   useLegacy: boolean;
   kiosk?: boolean;
   layoutType?: DisplayLayout["type"];
+  initialMediaPlaylist?: MediaPlaylistItem[];
 }) {
   return (
     <TenantProvider slug={slug}>
       {layoutType === "media-portrait" ? (
-        <MediaPortraitDisplayBoard slug={slug} kiosk={kiosk} />
+        <MediaPortraitDisplayBoard
+          slug={slug}
+          kiosk={kiosk}
+          initialPlaylist={initialMediaPlaylist}
+        />
       ) : layoutType === "portrait" ? (
         <PortraitDisplayBoard
           slug={slug}
