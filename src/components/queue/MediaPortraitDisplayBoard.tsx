@@ -38,9 +38,12 @@ export default function MediaPortraitDisplayBoard({
 
   const fetchPromotions = useCallback(async () => {
     try {
-      const res = await fetch(`/api/tenants/${slug}/promotions`);
+      const res = await fetch(`/api/tenants/${slug}/promotions`, {
+        cache: "no-store",
+      });
       if (!res.ok) return;
       const data: Promotion[] = await res.json();
+      if (!Array.isArray(data)) return;
       const videos = data.filter(
         (promo) =>
           !!promo.videoUrl?.trim() &&

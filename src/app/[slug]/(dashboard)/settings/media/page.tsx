@@ -38,6 +38,8 @@ export default function MediaSettingsPage() {
   const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState<string | null>(null);
 
+  const [loadError, setLoadError] = useState<string | null>(null);
+
   const mediaItems = useMemo(
     () => items.filter((item) => !!item.videoUrl?.trim()),
     [items]
@@ -46,15 +48,49 @@ export default function MediaSettingsPage() {
   const kioskUrl = `${APP_URL}/${slug}/display/media-portrait?kiosk=1`;
 
   const loadItems = useCallback(async () => {
-    const res = await fetch(`/api/tenants/${slug}/promotions?includeInactive=1`);
-    if (!res.ok) {
-      toast("Failed to load media", "error");
+    setLoadError(null);
+
+    const parseList = async (res: Response) => {
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        const message =
+          data && typeof data === "object" && "error" in data
+            ? String((data as { error: unknown }).error)
+            : `Failed to load media (${res.status})`;
+        throw new Error(message);
+      }
+      if (!Array.isArray(data)) {
+        throw new Error("Unexpected media response");
+      }
+      return data as MediaItem[];
+    };
+
+    try {
+      // Prefer full list (includes hidden). Requires staff session.
+      let res = await fetch(
+        `/api/tenants/${slug}/promotions?includeInactive=1`,
+        { credentials: "include", cache: "no-store" }
+      );
+
+      if (res.status === 401 || res.status === 403) {
+        // Fall back to public active list so the playlist is still visible
+        res = await fetch(`/api/tenants/${slug}/promotions`, {
+          credentials: "include",
+          cache: "no-store",
+        });
+      }
+
+      const data = await parseList(res);
+      setItems(data);
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to load media";
+      setLoadError(message);
+      setItems([]);
+      toast(message, "error");
+    } finally {
       setLoading(false);
-      return;
     }
-    const data = await res.json();
-    setItems(data);
-    setLoading(false);
   }, [slug, toast]);
 
   useEffect(() => {
@@ -280,8 +316,30 @@ export default function MediaSettingsPage() {
       </form>
 
       <div className="space-y-3">
-        <h2 className="text-lg font-semibold text-white">Playlist</h2>
-        {mediaItems.length === 0 ? (
+        <h2 className="text-lg font-semibold text-white">
+          Playlist{mediaItems.length > 0 ? ` (${mediaItems.length})` : ""}
+        </h2>
+        {loadError ? (
+          <div className="rounded-xl border border-red-500/30 bg-red-950/30 px-4 py-3 text-sm text-red-200">
+            <p>{loadError}</p>
+            <p className="mt-2 text-red-200/70">
+              Open this page on{" "}
+              <span className="text-white">https://liveque.vercel.app</span> while
+              signed in as an MKE staff/owner account, then refresh.
+            </p>
+            <Button
+              type="button"
+              variant="secondary"
+              className="mt-3"
+              onClick={() => {
+                setLoading(true);
+                void loadItems();
+              }}
+            >
+              Retry
+            </Button>
+          </div>
+        ) : mediaItems.length === 0 ? (
           <p className="text-gray-500 text-sm">
             No videos yet. Add a link above to start the Media Portrait playlist.
           </p>

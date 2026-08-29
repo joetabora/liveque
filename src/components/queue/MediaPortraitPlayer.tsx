@@ -214,9 +214,15 @@ function TikTokEngine({
   useEffect(() => {
     endedRef.current = false;
     durationRef.current = 0;
+    const hasPlayedRef = { current: false };
+    const readyAt = Date.now();
+    const MIN_PLAY_MS = 2500;
 
     const finish = () => {
       if (endedRef.current) return;
+      // Ignore false "ended" events before the clip has actually played.
+      if (!hasPlayedRef.current) return;
+      if (Date.now() - readyAt < MIN_PLAY_MS) return;
       endedRef.current = true;
       if (fallbackTimerRef.current) {
         window.clearTimeout(fallbackTimerRef.current);
@@ -247,7 +253,7 @@ function TikTokEngine({
       if (fallbackTimerRef.current) {
         window.clearTimeout(fallbackTimerRef.current);
       }
-      fallbackTimerRef.current = window.setTimeout(finish, ms);
+      fallbackTimerRef.current = window.setTimeout(finish, Math.max(ms, MIN_PLAY_MS));
     };
 
     // Default short-form fallback; refined once we know duration
@@ -267,17 +273,17 @@ function TikTokEngine({
       if (type === "onStateChange") {
         const state = Number(value);
         // -1 init, 0 ended, 1 playing, 2 paused, 3 buffering
+        if (state === 1) {
+          hasPlayedRef.current = true;
+          return;
+        }
         if (state === 0) {
           finish();
           return;
         }
-        if (state === 2) {
+        if (state === 2 && hasPlayedRef.current) {
+          // Keep kiosk playback going if TikTok pauses itself mid-clip
           kickPlay();
-          return;
-        }
-        if (state === 1) {
-          // playing
-          return;
         }
         return;
       }
@@ -289,31 +295,34 @@ function TikTokEngine({
         if (value && typeof value === "object") {
           const v = value as { currentTime?: unknown; duration?: unknown };
           currentTime = Number(v.currentTime) || 0;
+          if (currentTime > 0.5) hasPlayedRef.current = true;
           if (Number(v.duration) > 0) {
             duration = Number(v.duration);
             durationRef.current = duration;
-            // End slightly after the clip; replace the coarse fallback
-            const remainingMs = Math.max(1000, (duration - currentTime + 0.4) * 1000);
+            const remainingMs = Math.max(
+              MIN_PLAY_MS,
+              (duration - currentTime + 0.5) * 1000
+            );
             scheduleFallback(remainingMs);
           }
         }
 
-        if (duration > 1 && currentTime >= duration - 0.4) {
+        if (
+          hasPlayedRef.current &&
+          duration > 1 &&
+          currentTime >= duration - 0.35
+        ) {
           finish();
         }
       }
 
-      if (type === "onPlayerError" || type === "onError") {
-        finish();
-      }
+      // Don't auto-skip on embed errors — often fire during load on kiosk browsers
     };
 
     window.addEventListener("message", onMessage);
 
     const kickTimer = window.setInterval(kickPlay, 500);
     const stopKicks = window.setTimeout(() => window.clearInterval(kickTimer), 8000);
-
-    // After iframe navigates, try play even before onPlayerReady
     const earlyKick = window.setTimeout(kickPlay, 300);
 
     return () => {
