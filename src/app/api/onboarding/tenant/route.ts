@@ -7,6 +7,7 @@ import { requireAuth } from "@/lib/auth/permissions";
 import { handleApiError, jsonSuccess } from "@/lib/api-utils";
 import { onboardingTenantSchema } from "@/lib/validation/schemas";
 import { logAuditEvent } from "@/lib/audit";
+import { ensureKioskDisplays } from "@/lib/displays-server";
 
 export async function POST(request: NextRequest) {
   try {
@@ -48,6 +49,8 @@ export async function POST(request: NextRequest) {
       publicToken: randomUUID(),
       layout: { type: "default" },
     });
+
+    await ensureKioskDisplays(tenant.id);
 
     await db.insert(subscriptions).values({
       tenantId: tenant.id,

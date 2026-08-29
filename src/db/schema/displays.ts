@@ -36,7 +36,7 @@ export const displays = pgTable(
 );
 
 export interface DisplayLayout {
-  type: "default" | "compact" | "portrait";
+  type: "default" | "compact" | "portrait" | "media-portrait";
 }
 
 export type Display = typeof displays.$inferSelect;

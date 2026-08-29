@@ -18,6 +18,7 @@ export default async function TenantAdminPage({
       tenantId={tenant.id}
       displayPath={`/${slug}/display/main?kiosk=1`}
       portraitDisplayPath={`/${slug}/display/portrait?kiosk=1`}
+      mediaPortraitDisplayPath={`/${slug}/display/media-portrait?kiosk=1`}
       useLegacy={USE_LEGACY_QUEUE}
       embedded
     />

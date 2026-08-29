@@ -179,7 +179,7 @@ export default function PromotionsSettingsPage() {
     <div>
       <PageHeader
         title="Promotions"
-        description="Manage event and in-store ads shown on the portrait kiosk display"
+        description="Manage ads for the Portrait kiosk and videos for Media Portrait"
       />
 
       <form onSubmit={handleSubmit} className="max-w-xl space-y-4 mb-10">
@@ -222,18 +222,20 @@ export default function PromotionsSettingsPage() {
         </div>
         <div>
           <label className="block text-sm text-gray-400 mb-1.5">
-            Video URL (optional — YouTube or TikTok)
+            Video URL (optional — YouTube, TikTok, Facebook, Instagram)
           </label>
           <input
             type="url"
             value={form.videoUrl}
             onChange={(e) => setForm({ ...form, videoUrl: e.target.value })}
             className="w-full bg-iron-dark border border-iron-border rounded-xl px-4 py-2.5 text-white"
-            placeholder="https://www.youtube.com/watch?v=..."
+            placeholder="https://www.youtube.com/shorts/..."
           />
           <p className="mt-1.5 text-xs text-gray-500">
-            Paste a full YouTube or TikTok link. Short TikTok share links are not
-            supported — use the full tiktok.com/…/video/… URL.
+            Portrait shows images and videos. Media Portrait plays only video
+            links fullscreen and advances when each clip finishes. Use full
+            TikTok/Facebook/Instagram URLs (not short share links). Videos
+            autoplay muted.
           </p>
         </div>
         {(previewVideo || previewImage) && (
@@ -262,7 +264,7 @@ export default function PromotionsSettingsPage() {
             onChange={(e) => setForm({ ...form, isActive: e.target.checked })}
             className="rounded"
           />
-          Show on portrait display
+          Show on Portrait / Media Portrait displays
         </label>
         <div className="flex gap-3">
           <Button type="submit" loading={saving}>
@@ -280,7 +282,7 @@ export default function PromotionsSettingsPage() {
         <h2 className="text-lg font-semibold text-white">Current promotions</h2>
         {promotions.length === 0 ? (
           <p className="text-gray-500 text-sm">
-            No promotions yet. Add one above to show on the portrait kiosk.
+            No promotions yet. Add images for Portrait, or video links for Media Portrait.
           </p>
         ) : (
           promotions.map((promo, index) => {

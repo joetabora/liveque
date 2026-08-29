@@ -11,6 +11,7 @@ export default async function LegacyAdminPage() {
       tenantId={tenant?.id ?? null}
       displayPath="/display?kiosk=1"
       portraitDisplayPath={`/${LEGACY_TENANT_SLUG}/display/portrait?kiosk=1`}
+      mediaPortraitDisplayPath={`/${LEGACY_TENANT_SLUG}/display/media-portrait?kiosk=1`}
       useLegacy={USE_LEGACY_QUEUE || !tenant}
     />
   );

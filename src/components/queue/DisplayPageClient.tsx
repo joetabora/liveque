@@ -4,24 +4,30 @@ import dynamic from "next/dynamic";
 import { TenantProvider } from "@/contexts/TenantContext";
 import type { DisplayLayout } from "@/db/schema/displays";
 
+const loadingSpinner = (
+  <div className="min-h-screen flex items-center justify-center bg-iron-black">
+    <div className="w-12 h-12 border-4 border-brand-primary border-t-transparent rounded-full animate-spin" />
+  </div>
+);
+
 const DisplayBoard = dynamic(() => import("@/components/queue/DisplayBoard"), {
   ssr: false,
-  loading: () => (
-    <div className="min-h-screen flex items-center justify-center bg-iron-black">
-      <div className="w-12 h-12 border-4 border-brand-primary border-t-transparent rounded-full animate-spin" />
-    </div>
-  ),
+  loading: () => loadingSpinner,
 });
 
 const PortraitDisplayBoard = dynamic(
   () => import("@/components/queue/PortraitDisplayBoard"),
   {
     ssr: false,
-    loading: () => (
-      <div className="min-h-screen flex items-center justify-center bg-iron-black">
-        <div className="w-12 h-12 border-4 border-brand-primary border-t-transparent rounded-full animate-spin" />
-      </div>
-    ),
+    loading: () => loadingSpinner,
+  }
+);
+
+const MediaPortraitDisplayBoard = dynamic(
+  () => import("@/components/queue/MediaPortraitDisplayBoard"),
+  {
+    ssr: false,
+    loading: () => loadingSpinner,
   }
 );
 
@@ -38,11 +44,11 @@ export default function DisplayPageClient({
   kiosk?: boolean;
   layoutType?: DisplayLayout["type"];
 }) {
-  const isPortrait = layoutType === "portrait";
-
   return (
     <TenantProvider slug={slug}>
-      {isPortrait ? (
+      {layoutType === "media-portrait" ? (
+        <MediaPortraitDisplayBoard slug={slug} kiosk={kiosk} />
+      ) : layoutType === "portrait" ? (
         <PortraitDisplayBoard
           slug={slug}
           tenantId={tenantId}

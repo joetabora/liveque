@@ -1,0 +1,155 @@
+"use client";
+
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { useTenant } from "@/contexts/TenantContext";
+import { useDisplayFullscreen } from "@/hooks/useDisplayFullscreen";
+import { DisplayFullscreenPrompt } from "@/components/queue/DisplayFullscreenPrompt";
+import { MediaPortraitPlayer } from "@/components/queue/MediaPortraitPlayer";
+import { parsePromotionVideoUrl } from "@/lib/promotion-video";
+
+interface Promotion {
+  id: string;
+  title: string;
+  subtitle: string | null;
+  imageUrl: string | null;
+  videoUrl: string | null;
+}
+
+interface MediaPortraitDisplayBoardProps {
+  slug: string;
+  kiosk?: boolean;
+}
+
+const PROMO_REFETCH_MS = 30000;
+
+export default function MediaPortraitDisplayBoard({
+  slug,
+  kiosk = false,
+}: MediaPortraitDisplayBoardProps) {
+  const { tenant } = useTenant();
+  const brandColor = tenant?.brandColor ?? "#0065a6";
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [promotions, setPromotions] = useState<Promotion[]>([]);
+  const [index, setIndex] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  const fetchPromotions = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/tenants/${slug}/promotions`);
+      if (!res.ok) return;
+      const data: Promotion[] = await res.json();
+      const videos = data.filter(
+        (promo) =>
+          !!promo.videoUrl?.trim() &&
+          !!parsePromotionVideoUrl(promo.videoUrl, { loop: false })
+      );
+      setPromotions(videos);
+      setIndex((prev) => (videos.length === 0 ? 0 : Math.min(prev, videos.length - 1)));
+    } catch {
+      // Keep last good playlist if refetch fails
+    } finally {
+      setLoading(false);
+    }
+  }, [slug]);
+
+  useEffect(() => {
+    fetchPromotions();
+    const interval = setInterval(fetchPromotions, PROMO_REFETCH_MS);
+    return () => clearInterval(interval);
+  }, [fetchPromotions]);
+
+  const current = promotions[index] ?? null;
+
+  const advance = useCallback(() => {
+    setIndex((prev) => {
+      if (promotions.length === 0) return 0;
+      return (prev + 1) % promotions.length;
+    });
+  }, [promotions.length]);
+
+  const { toggleFullscreen, showPrompt, dismissPrompt } = useDisplayFullscreen(
+    containerRef,
+    { kiosk }
+  );
+
+  const emptyMessage = useMemo(
+    () =>
+      "Add YouTube, TikTok, Facebook, or Instagram video links in Promotions to play here.",
+    []
+  );
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-black">
+        <div className="w-12 h-12 border-4 border-brand-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  return (
+    <div
+      ref={containerRef}
+      className="h-screen w-screen bg-black relative overflow-hidden"
+      style={
+        {
+          "--brand-primary": brandColor,
+        } as React.CSSProperties
+      }
+    >
+      <DisplayFullscreenPrompt
+        show={showPrompt}
+        onActivate={dismissPrompt}
+        brandColor={brandColor}
+      />
+
+      {!kiosk && (
+        <button
+          type="button"
+          onClick={toggleFullscreen}
+          className="absolute top-4 right-4 z-20 p-2 rounded-lg bg-black/50 hover:bg-white/10 text-gray-400 hover:text-white transition-colors cursor-pointer"
+          title="Toggle Fullscreen"
+        >
+          ⛶
+        </button>
+      )}
+
+      {current?.videoUrl ? (
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={`${current.id}-${index}`}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.35 }}
+            className="absolute inset-0"
+          >
+            <MediaPortraitPlayer
+              title={current.title}
+              videoUrl={current.videoUrl}
+              onEnded={advance}
+            />
+          </motion.div>
+        </AnimatePresence>
+      ) : (
+        <div className="absolute inset-0 flex flex-col items-center justify-center px-12 text-center">
+          <p className="text-2xl font-bold text-white">Media Portrait</p>
+          <p className="mt-4 text-lg text-gray-400 max-w-md">{emptyMessage}</p>
+        </div>
+      )}
+
+      {promotions.length > 1 && (
+        <div className="absolute bottom-6 left-0 right-0 z-10 flex justify-center gap-2 pointer-events-none">
+          {promotions.map((promo, i) => (
+            <span
+              key={promo.id}
+              className={`w-2 h-2 rounded-full ${
+                i === index ? "bg-white" : "bg-white/30"
+              }`}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}

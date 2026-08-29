@@ -52,7 +52,7 @@ export const displayCreateSchema = z.object({
     .max(50)
     .regex(/^[a-z0-9-]+$/),
   name: z.string().min(1).max(100),
-  layout: z.enum(["default", "compact", "portrait"]).optional(),
+  layout: z.enum(["default", "compact", "portrait", "media-portrait"]).optional(),
 });
 
 const optionalPromotionUrl = z.union([z.string().url(), z.literal("")]).optional();
@@ -68,7 +68,8 @@ function validatePromotionMedia(
   if (requireMedia && !image && !video) {
     ctx.addIssue({
       code: "custom",
-      message: "Provide an image URL or a YouTube/TikTok video link",
+      message:
+        "Provide an image URL or a YouTube, TikTok, Facebook, or Instagram video link",
       path: ["imageUrl"],
     });
   }
@@ -76,7 +77,8 @@ function validatePromotionMedia(
   if (video && !parsePromotionVideoUrl(video)) {
     ctx.addIssue({
       code: "custom",
-      message: "Video link must be a supported YouTube or TikTok URL",
+      message:
+        "Video link must be a supported YouTube, TikTok, Facebook, or Instagram URL",
       path: ["videoUrl"],
     });
   }

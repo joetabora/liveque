@@ -16,6 +16,7 @@ export default function AdminPageClient({
   tenantId,
   displayPath,
   portraitDisplayPath,
+  mediaPortraitDisplayPath,
   useLegacy,
   embedded,
 }: {
@@ -23,6 +24,7 @@ export default function AdminPageClient({
   tenantId: string | null;
   displayPath?: string;
   portraitDisplayPath?: string;
+  mediaPortraitDisplayPath?: string;
   useLegacy: boolean;
   embedded?: boolean;
 }) {
@@ -32,6 +34,7 @@ export default function AdminPageClient({
       tenantId={tenantId}
       displayPath={displayPath}
       portraitDisplayPath={portraitDisplayPath}
+      mediaPortraitDisplayPath={mediaPortraitDisplayPath}
       useLegacy={useLegacy}
       embedded={embedded}
     />

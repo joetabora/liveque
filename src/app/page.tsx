@@ -47,6 +47,9 @@ export default function HomePage() {
             <Link href="/mkehd/display/portrait?kiosk=1">
               <Button variant="secondary" size="lg">Portrait Demo</Button>
             </Link>
+            <Link href="/mkehd/display/media-portrait?kiosk=1">
+              <Button variant="secondary" size="lg">Media Portrait Demo</Button>
+            </Link>
           </div>
         </motion.div>
 

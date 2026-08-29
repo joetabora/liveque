@@ -4,7 +4,7 @@ import { drizzle } from "drizzle-orm/neon-http";
 import { eq, and } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import * as schema from "../src/db/schema";
-import { ensurePortraitDisplay } from "../src/lib/displays-server";
+import { ensureKioskDisplays } from "../src/lib/displays-server";
 
 const sql = neon(process.env.DATABASE_URL!);
 const db = drizzle(sql, { schema });
@@ -73,8 +73,8 @@ async function seed() {
 
   if (existing) {
     console.log(`Tenant "${MKEHD_SLUG}" already exists (${existing.id})`);
-    const portrait = await ensurePortraitDisplay(existing.id);
-    console.log(`Portrait display ready (${portrait.id})`);
+    await ensureKioskDisplays(existing.id);
+    console.log(`Portrait and Media Portrait displays ready`);
     await ensureStaffMemberships(existing.id);
 
     if (SUPER_ADMIN_EMAIL) {
@@ -147,8 +147,8 @@ async function seed() {
     isActive: true,
   });
 
-  await ensurePortraitDisplay(tenant.id);
-  console.log(`Created portrait display for tenant ${MKEHD_SLUG}`);
+  await ensureKioskDisplays(tenant.id);
+  console.log(`Created portrait displays for tenant ${MKEHD_SLUG}`);
 
   console.log(`Created tenant "${MKEHD_SLUG}" with id ${tenant.id}`);
 

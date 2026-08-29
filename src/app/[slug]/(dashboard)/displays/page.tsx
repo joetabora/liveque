@@ -16,6 +16,7 @@ const layoutLabels: Record<string, string> = {
   default: "Landscape",
   compact: "Compact",
   portrait: "Portrait",
+  "media-portrait": "Media Portrait",
 };
 
 export default function DisplaysPage() {

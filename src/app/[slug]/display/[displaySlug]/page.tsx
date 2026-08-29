@@ -1,6 +1,9 @@
 import { notFound } from "next/navigation";
 import { getTenantBySlugServer, getDisplayBySlug } from "@/lib/tenant-server";
-import { ensurePortraitDisplay } from "@/lib/displays-server";
+import {
+  ensureMediaPortraitDisplay,
+  ensurePortraitDisplay,
+} from "@/lib/displays-server";
 import { USE_LEGACY_QUEUE } from "@/lib/constants";
 import DisplayPageClient from "@/components/queue/DisplayPageClient";
 import type { DisplayLayout } from "@/db/schema/displays";
@@ -19,6 +22,8 @@ export default async function TenantDisplayPage({
 
   if (displaySlug === "portrait") {
     await ensurePortraitDisplay(tenant.id);
+  } else if (displaySlug === "media-portrait") {
+    await ensureMediaPortraitDisplay(tenant.id);
   }
 
   const display = await getDisplayBySlug(tenant.id, displaySlug);

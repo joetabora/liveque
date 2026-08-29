@@ -36,6 +36,7 @@ interface AdminDashboardProps {
   tenantId: string | null;
   displayPath?: string;
   portraitDisplayPath?: string;
+  mediaPortraitDisplayPath?: string;
   useLegacy?: boolean;
   embedded?: boolean;
 }
@@ -45,6 +46,7 @@ export default function AdminDashboard({
   tenantId,
   displayPath,
   portraitDisplayPath,
+  mediaPortraitDisplayPath,
   useLegacy = false,
   embedded = false,
 }: AdminDashboardProps) {
@@ -62,6 +64,8 @@ export default function AdminDashboard({
   const displayUrl = displayPath ?? `/${slug}/display/main?kiosk=1`;
   const portraitDisplayUrl =
     portraitDisplayPath ?? `/${slug}/display/portrait?kiosk=1`;
+  const mediaPortraitDisplayUrl =
+    mediaPortraitDisplayPath ?? `/${slug}/display/media-portrait?kiosk=1`;
 
   const displayLinks = (
     <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
@@ -78,6 +82,13 @@ export default function AdminDashboard({
         className="text-gray-500 hover:text-brand-primary transition-colors underline underline-offset-4"
       >
         Portrait display →
+      </a>
+      <a
+        href={mediaPortraitDisplayUrl}
+        target="_blank"
+        className="text-gray-500 hover:text-brand-primary transition-colors underline underline-offset-4"
+      >
+        Media Portrait →
       </a>
     </div>
   );
