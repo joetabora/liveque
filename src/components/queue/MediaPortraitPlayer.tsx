@@ -36,7 +36,6 @@ function YouTubeEngine({
   const endedGateRef = useRef(false);
   const videoIdRef = useRef(videoId);
   const onEndedRef = useRef(onEnded);
-  const [blocked, setBlocked] = useState(false);
 
   videoIdRef.current = videoId;
   onEndedRef.current = onEnded;
@@ -77,7 +76,6 @@ function YouTubeEngine({
               endedGateRef.current = false;
               e.target.mute();
               e.target.playVideo();
-              setBlocked(false);
             },
             onStateChange: (e) => {
               if (e.data === YT_ENDED) {
@@ -86,13 +84,12 @@ function YouTubeEngine({
                 onEndedRef.current();
                 return;
               }
+              // Keep muted playback going if the player cues/pauses itself
               if (e.data === YT_CUED || e.data === YT_PAUSED) {
                 e.target.mute();
                 e.target.playVideo();
               }
               if (e.data === 1) {
-                // PLAYING
-                setBlocked(false);
                 endedGateRef.current = false;
               }
             },
@@ -103,7 +100,7 @@ function YouTubeEngine({
         });
       })
       .catch(() => {
-        if (!cancelled) setBlocked(true);
+        // Fall through — display stays black; duration fallback will advance
       });
 
     return () => {
@@ -136,21 +133,13 @@ function YouTubeEngine({
           // ignore
         }
       }, 400);
-      const stop = window.setTimeout(() => {
-        window.clearInterval(kick);
-        try {
-          if (player.getPlayerState() !== 1) setBlocked(true);
-        } catch {
-          setBlocked(true);
-        }
-      }, 5000);
-
+      const stop = window.setTimeout(() => window.clearInterval(kick), 4000);
       return () => {
         window.clearInterval(kick);
         window.clearTimeout(stop);
       };
     } catch {
-      setBlocked(true);
+      // ignore
     }
   }, [videoId]);
 
@@ -165,30 +154,9 @@ function YouTubeEngine({
     return () => window.clearTimeout(timer);
   }, [videoId]);
 
-  const resume = () => {
-    const player = playerRef.current;
-    if (!player) return;
-    try {
-      player.mute();
-      player.playVideo();
-      setBlocked(false);
-    } catch {
-      // ignore
-    }
-  };
-
   return (
     <div className="absolute inset-0 bg-black">
       <div ref={mountRef} className="absolute inset-0 w-full h-full" />
-      {blocked && (
-        <button
-          type="button"
-          onClick={resume}
-          className="absolute inset-0 z-20 flex items-center justify-center bg-black/70 text-white text-2xl font-bold"
-        >
-          Tap to play
-        </button>
-      )}
     </div>
   );
 }
@@ -223,7 +191,7 @@ function kickIframe(win: Window, embed: PromotionVideoEmbed) {
   }
 }
 
-/** Non-YouTube embeds — remount with about:blank + tap-to-resume fallback. */
+/** Non-YouTube embeds — remount with about:blank between clips. */
 function IframeEngine({
   title,
   embed,
@@ -239,7 +207,6 @@ function IframeEngine({
   const endedRef = useRef(false);
   const onEndedRef = useRef(onEnded);
   const [src, setSrc] = useState<string>("about:blank");
-  const [blocked, setBlocked] = useState(false);
   onEndedRef.current = onEnded;
 
   const embedSrc = (() => {
@@ -253,7 +220,6 @@ function IframeEngine({
 
   useEffect(() => {
     endedRef.current = false;
-    setBlocked(false);
     setSrc("about:blank");
     const t = window.setTimeout(() => setSrc(embedSrc), 50);
     return () => window.clearTimeout(t);
@@ -288,22 +254,15 @@ function IframeEngine({
       const win = iframeRef.current?.contentWindow;
       if (win) kickIframe(win, embed);
     }, 600);
-
-    const blockedTimer = window.setTimeout(() => setBlocked(true), 4000);
+    const stopKicks = window.setTimeout(() => window.clearInterval(kickTimer), 5000);
 
     return () => {
       window.clearTimeout(fallbackTimer);
-      window.clearTimeout(blockedTimer);
+      window.clearTimeout(stopKicks);
       window.clearInterval(kickTimer);
       window.removeEventListener("message", onMessage);
     };
   }, [src, embed, playbackKey]);
-
-  const resume = () => {
-    setBlocked(false);
-    setSrc("about:blank");
-    window.setTimeout(() => setSrc(embedSrc), 50);
-  };
 
   return (
     <div className="absolute inset-0 bg-black">
@@ -316,15 +275,6 @@ function IframeEngine({
         referrerPolicy="strict-origin-when-cross-origin"
         allowFullScreen
       />
-      {blocked && (
-        <button
-          type="button"
-          onClick={resume}
-          className="absolute inset-0 z-20 flex items-center justify-center bg-black/70 text-white text-2xl font-bold"
-        >
-          Tap to play
-        </button>
-      )}
     </div>
   );
 }
@@ -358,7 +308,6 @@ export function YouTubeNativePlaylist({
       disablekb: "1",
       iv_load_policy: "3",
       loop: "1",
-      // Include all IDs so loop restarts the full playlist
       playlist: videoIds.join(","),
       enablejsapi: "1",
       origin: window.location.origin,
