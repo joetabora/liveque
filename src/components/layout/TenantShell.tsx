@@ -17,6 +17,7 @@ export function TenantShell({
     { href: `/${slug}/displays`, label: "Displays" },
     { href: `/${slug}/settings/branding`, label: "Branding" },
     { href: `/${slug}/settings/promotions`, label: "Promotions" },
+    { href: `/${slug}/settings/media`, label: "Media" },
     { href: `/${slug}/settings/team`, label: "Team" },
     { href: `/${slug}/settings/billing`, label: "Billing" },
   ];
