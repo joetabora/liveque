@@ -5,55 +5,102 @@ import {
   buildPromotionEmbedSrc,
   getMediaPortraitFallbackMs,
   parsePromotionVideoUrl,
+  type PromotionVideoEmbed,
   type PromotionVideoProvider,
 } from "@/lib/promotion-video";
 
 interface MediaPortraitPlayerProps {
   title: string;
   videoUrl: string;
+  /** Bump when advancing so each clip gets a fresh embed + play kick. */
+  playbackKey: string | number;
   onEnded: () => void;
 }
 
-function isYouTubeEndedPayload(data: unknown): boolean {
-  if (typeof data === "string") {
-    try {
-      return isYouTubeEndedPayload(JSON.parse(data));
-    } catch {
-      return data.includes('"info":0') || data.includes('"info": 0');
-    }
+function parseMessageData(data: unknown): unknown {
+  if (typeof data !== "string") return data;
+  try {
+    return JSON.parse(data);
+  } catch {
+    return data;
   }
-  if (!data || typeof data !== "object") return false;
-  const payload = data as { event?: string; info?: number | string };
+}
+
+function isYouTubeEndedPayload(data: unknown): boolean {
+  const parsed = parseMessageData(data);
+  if (typeof parsed === "string") {
+    return parsed.includes('"info":0') || parsed.includes('"info": 0');
+  }
+  if (!parsed || typeof parsed !== "object") return false;
+  const payload = parsed as { event?: string; info?: number | string };
   return (
     payload.event === "onStateChange" &&
     (payload.info === 0 || payload.info === "0")
   );
 }
 
+function isYouTubeReadyPayload(data: unknown): boolean {
+  const parsed = parseMessageData(data);
+  if (typeof parsed === "string") return parsed.includes("onReady");
+  if (!parsed || typeof parsed !== "object") return false;
+  return (parsed as { event?: string }).event === "onReady";
+}
+
 function isTikTokEndedPayload(data: unknown): boolean {
-  if (typeof data === "string") {
-    try {
-      return isTikTokEndedPayload(JSON.parse(data));
-    } catch {
-      const lower = data.toLowerCase();
-      return (
-        lower.includes("ended") ||
-        lower.includes("onplayerended") ||
-        lower.includes('"type":"end"')
-      );
-    }
+  const parsed = parseMessageData(data);
+  if (typeof parsed === "string") {
+    const lower = parsed.toLowerCase();
+    return (
+      lower.includes("ended") ||
+      lower.includes("onplayerended") ||
+      lower.includes('"type":"end"')
+    );
   }
-  if (!data || typeof data !== "object") return false;
-  const payload = data as Record<string, unknown>;
-  const type = String(payload.type ?? payload.event ?? payload.name ?? "").toLowerCase();
+  if (!parsed || typeof parsed !== "object") return false;
+  const payload = parsed as Record<string, unknown>;
+  const type = String(
+    payload.type ?? payload.event ?? payload.name ?? ""
+  ).toLowerCase();
   if (type.includes("ended") || type === "onplayerended") return true;
   if (payload["x-tiktok-player"] === true && type.includes("end")) return true;
   return false;
 }
 
+function postYouTubeCommand(
+  win: Window,
+  func: string,
+  args: unknown[] = []
+) {
+  win.postMessage(
+    JSON.stringify({ event: "command", func, args }),
+    "*"
+  );
+}
+
+function kickPlayback(win: Window, embed: PromotionVideoEmbed) {
+  if (embed.provider === "youtube") {
+    postYouTubeCommand(win, "mute");
+    postYouTubeCommand(win, "playVideo");
+    return;
+  }
+
+  if (embed.provider === "tiktok") {
+    // TikTok player/v1 — best-effort play signals
+    win.postMessage(
+      JSON.stringify({ type: "play", "x-tiktok-player": true }),
+      "*"
+    );
+    win.postMessage(
+      JSON.stringify({ event: "play", "x-tiktok-player": true }),
+      "*"
+    );
+  }
+}
+
 export function MediaPortraitPlayer({
   title,
   videoUrl,
+  playbackKey,
   onEnded,
 }: MediaPortraitPlayerProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -70,8 +117,12 @@ export function MediaPortraitPlayer({
     if (!embed) return null;
     const origin =
       typeof window !== "undefined" ? window.location.origin : undefined;
-    return buildPromotionEmbedSrc(embed, { loop: false, origin });
-  }, [embed]);
+    const base = buildPromotionEmbedSrc(embed, { loop: false, origin });
+    // Cache-bust so the browser does not reuse a paused player instance.
+    const url = new URL(base);
+    url.searchParams.set("_lq", String(playbackKey));
+    return url.toString();
+  }, [embed, playbackKey]);
 
   useEffect(() => {
     endedRef.current = false;
@@ -89,8 +140,12 @@ export function MediaPortraitPlayer({
     const onMessage = (event: MessageEvent) => {
       const origin = event.origin.toLowerCase();
       const provider = embed.provider;
+      const win = iframeRef.current?.contentWindow;
 
       if (provider === "youtube" && origin.includes("youtube.com")) {
+        if (isYouTubeReadyPayload(event.data) && win) {
+          kickPlayback(win, embed);
+        }
         if (isYouTubeEndedPayload(event.data)) finish();
         return;
       }
@@ -102,25 +157,33 @@ export function MediaPortraitPlayer({
 
     window.addEventListener("message", onMessage);
 
-    // YouTube JS API needs a listening handshake before state events fire.
-    const handshake =
-      embed.provider === "youtube"
-        ? window.setInterval(() => {
-            const win = iframeRef.current?.contentWindow;
-            if (!win) return;
-            win.postMessage(
-              JSON.stringify({ event: "listening", id: embed.videoId }),
-              "*"
-            );
-          }, 1000)
-        : null;
+    // Handshake + repeated play kicks — needed when the next iframe mounts
+    // without a fresh user gesture (first clip often works, later ones stall).
+    const kickTimer = window.setInterval(() => {
+      const win = iframeRef.current?.contentWindow;
+      if (!win) return;
+
+      if (embed.provider === "youtube") {
+        win.postMessage(
+          JSON.stringify({ event: "listening", id: embed.videoId }),
+          "*"
+        );
+      }
+
+      kickPlayback(win, embed);
+    }, 500);
+
+    const stopKicks = window.setTimeout(() => {
+      window.clearInterval(kickTimer);
+    }, 8000);
 
     return () => {
       window.clearTimeout(fallbackTimer);
-      if (handshake) window.clearInterval(handshake);
+      window.clearTimeout(stopKicks);
+      window.clearInterval(kickTimer);
       window.removeEventListener("message", onMessage);
     };
-  }, [embed, videoUrl]);
+  }, [embed, videoUrl, playbackKey]);
 
   if (!embed || !embedSrc) {
     return (
@@ -138,7 +201,7 @@ export function MediaPortraitPlayer({
         src={embedSrc}
         title={title}
         className="h-full w-full border-0 bg-black"
-        allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
+        allow="autoplay; fullscreen; encrypted-media; picture-in-picture; accelerometer; gyroscope"
         referrerPolicy="strict-origin-when-cross-origin"
         allowFullScreen
       />
@@ -148,8 +211,5 @@ export function MediaPortraitPlayer({
 }
 
 function ProviderHint({ provider }: { provider: PromotionVideoProvider }) {
-  // Invisible accessibility label only — keep the kiosk visually clean.
-  return (
-    <span className="sr-only">Playing {provider} video</span>
-  );
+  return <span className="sr-only">Playing {provider} video</span>;
 }

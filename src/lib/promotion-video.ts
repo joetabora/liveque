@@ -50,6 +50,7 @@ function buildYouTubeEmbed(videoId: string, loop: boolean): string {
     iv_load_policy: "3",
     disablekb: "1",
     enablejsapi: "1",
+    start: "0",
   });
 
   if (loop) {

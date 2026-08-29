@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
 import { useTenant } from "@/contexts/TenantContext";
 import { useDisplayFullscreen } from "@/hooks/useDisplayFullscreen";
 import { DisplayFullscreenPrompt } from "@/components/queue/DisplayFullscreenPrompt";
@@ -60,6 +59,7 @@ export default function MediaPortraitDisplayBoard({
   }, [fetchPromotions]);
 
   const current = promotions[index] ?? null;
+  const playbackKey = current ? `${current.id}-${index}` : "empty";
 
   const advance = useCallback(() => {
     setIndex((prev) => {
@@ -75,7 +75,7 @@ export default function MediaPortraitDisplayBoard({
 
   const emptyMessage = useMemo(
     () =>
-      "Add YouTube, TikTok, Facebook, or Instagram video links in Promotions to play here.",
+      "Add YouTube, TikTok, Facebook, or Instagram video links under Media to play here.",
     []
   );
 
@@ -115,22 +115,15 @@ export default function MediaPortraitDisplayBoard({
       )}
 
       {current?.videoUrl ? (
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={`${current.id}-${index}`}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.35 }}
-            className="absolute inset-0"
-          >
-            <MediaPortraitPlayer
-              title={current.title}
-              videoUrl={current.videoUrl}
-              onEnded={advance}
-            />
-          </motion.div>
-        </AnimatePresence>
+        <div className="absolute inset-0">
+          <MediaPortraitPlayer
+            key={playbackKey}
+            title={current.title}
+            videoUrl={current.videoUrl}
+            playbackKey={playbackKey}
+            onEnded={advance}
+          />
+        </div>
       ) : (
         <div className="absolute inset-0 flex flex-col items-center justify-center px-12 text-center">
           <p className="text-2xl font-bold text-white">Media Portrait</p>
