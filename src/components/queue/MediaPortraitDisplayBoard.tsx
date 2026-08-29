@@ -4,7 +4,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTenant } from "@/contexts/TenantContext";
 import { useDisplayFullscreen } from "@/hooks/useDisplayFullscreen";
 import { DisplayFullscreenPrompt } from "@/components/queue/DisplayFullscreenPrompt";
-import { MediaPortraitPlayer } from "@/components/queue/MediaPortraitPlayer";
+import {
+  MediaPortraitPlayer,
+  YouTubeNativePlaylist,
+} from "@/components/queue/MediaPortraitPlayer";
 import { parsePromotionVideoUrl } from "@/lib/promotion-video";
 
 interface Promotion {
@@ -44,7 +47,9 @@ export default function MediaPortraitDisplayBoard({
           !!parsePromotionVideoUrl(promo.videoUrl, { loop: false })
       );
       setPromotions(videos);
-      setIndex((prev) => (videos.length === 0 ? 0 : Math.min(prev, videos.length - 1)));
+      setIndex((prev) =>
+        videos.length === 0 ? 0 : Math.min(prev, videos.length - 1)
+      );
     } catch {
       // Keep last good playlist if refetch fails
     } finally {
@@ -57,6 +62,23 @@ export default function MediaPortraitDisplayBoard({
     const interval = setInterval(fetchPromotions, PROMO_REFETCH_MS);
     return () => clearInterval(interval);
   }, [fetchPromotions]);
+
+  const playlistMeta = useMemo(() => {
+    return promotions.map((promo) => ({
+      promo,
+      embed: parsePromotionVideoUrl(promo.videoUrl!, { loop: false })!,
+    }));
+  }, [promotions]);
+
+  const allYouTube =
+    playlistMeta.length > 0 &&
+    playlistMeta.every((item) => item.embed.provider === "youtube");
+
+  const youtubeIds = useMemo(
+    () =>
+      allYouTube ? playlistMeta.map((item) => item.embed.videoId) : [],
+    [allYouTube, playlistMeta]
+  );
 
   const current = promotions[index] ?? null;
   const playbackKey = current ? `${current.id}-${index}` : "empty";
@@ -71,12 +93,6 @@ export default function MediaPortraitDisplayBoard({
   const { toggleFullscreen, showPrompt, dismissPrompt } = useDisplayFullscreen(
     containerRef,
     { kiosk }
-  );
-
-  const emptyMessage = useMemo(
-    () =>
-      "Add YouTube, TikTok, Facebook, or Instagram video links under Media to play here.",
-    []
   );
 
   if (loading) {
@@ -114,24 +130,38 @@ export default function MediaPortraitDisplayBoard({
         </button>
       )}
 
-      {current?.videoUrl ? (
+      {promotions.length === 0 ? (
+        <div className="absolute inset-0 flex flex-col items-center justify-center px-12 text-center">
+          <p className="text-2xl font-bold text-white">Media Portrait</p>
+          <p className="mt-4 text-lg text-gray-400 max-w-md">
+            Add YouTube, TikTok, Facebook, or Instagram video links under Media
+            to play here.
+          </p>
+        </div>
+      ) : allYouTube ? (
+        <YouTubeNativePlaylist
+          videoIds={youtubeIds}
+          title="Media Portrait playlist"
+        />
+      ) : current?.videoUrl ? (
         <div className="absolute inset-0">
+          {/* Keep one YouTube engine mounted across YouTube→YouTube advances */}
           <MediaPortraitPlayer
-            key={playbackKey}
+            key={
+              parsePromotionVideoUrl(current.videoUrl, { loop: false })
+                ?.provider === "youtube"
+                ? "youtube-engine"
+                : playbackKey
+            }
             title={current.title}
             videoUrl={current.videoUrl}
             playbackKey={playbackKey}
             onEnded={advance}
           />
         </div>
-      ) : (
-        <div className="absolute inset-0 flex flex-col items-center justify-center px-12 text-center">
-          <p className="text-2xl font-bold text-white">Media Portrait</p>
-          <p className="mt-4 text-lg text-gray-400 max-w-md">{emptyMessage}</p>
-        </div>
-      )}
+      ) : null}
 
-      {promotions.length > 1 && (
+      {!allYouTube && promotions.length > 1 && (
         <div className="absolute bottom-6 left-0 right-0 z-10 flex justify-center gap-2 pointer-events-none">
           {promotions.map((promo, i) => (
             <span
