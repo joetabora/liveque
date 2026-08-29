@@ -90,6 +90,12 @@ export default function AdminDashboard({
       >
         Media Portrait →
       </a>
+      <a
+        href={`/${slug}/settings/media`}
+        className="text-gray-500 hover:text-brand-primary transition-colors underline underline-offset-4"
+      >
+        Edit media playlist →
+      </a>
     </div>
   );
 
