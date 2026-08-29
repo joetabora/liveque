@@ -25,9 +25,10 @@ export function AppShell({
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-iron-black flex">
+    // Document-level scroll (not nested overflow) — required for touch kiosk browsers
+    <div className="min-h-screen bg-iron-black lg:flex">
       <aside
-        className={`fixed lg:static inset-y-0 left-0 z-50 w-64 bg-iron-panel border-r border-iron-border transform transition-transform lg:translate-x-0 ${
+        className={`fixed lg:sticky lg:top-0 lg:h-screen lg:overflow-y-auto inset-y-0 left-0 z-50 w-64 bg-iron-panel border-r border-iron-border transform transition-transform lg:translate-x-0 ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
@@ -37,7 +38,8 @@ export function AppShell({
         </div>
         <nav className="p-3 space-y-1">
           {navItems.map((item) => {
-            const active = pathname === item.href || pathname.startsWith(item.href + "/");
+            const active =
+              pathname === item.href || pathname.startsWith(item.href + "/");
             return (
               <Link
                 key={item.href}
@@ -63,17 +65,18 @@ export function AppShell({
         />
       )}
 
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 min-w-0 w-full">
         <header className="lg:hidden sticky top-0 z-30 bg-iron-black/90 backdrop-blur border-b border-iron-border px-4 py-3 flex items-center gap-3">
           <button
             onClick={() => setSidebarOpen(true)}
             className="p-2 text-gray-400 hover:text-white"
+            type="button"
           >
             ☰
           </button>
           <span className="font-semibold truncate">{tenantName}</span>
         </header>
-        <main className="flex-1 overflow-auto">{children}</main>
+        <main>{children}</main>
       </div>
     </div>
   );
@@ -111,7 +114,9 @@ export function EmptyState({
   return (
     <div className="flex flex-col items-center justify-center py-16 text-center">
       <h3 className="text-lg font-semibold text-gray-300">{title}</h3>
-      {description && <p className="mt-2 text-sm text-gray-500 max-w-sm">{description}</p>}
+      {description && (
+        <p className="mt-2 text-sm text-gray-500 max-w-sm">{description}</p>
+      )}
       {action && <div className="mt-6">{action}</div>}
     </div>
   );
